@@ -38,3 +38,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error?.message || 'Failed to save order' }, { status: 500 });
   }
 }
+
+export async function DELETE() {
+  try {
+    const connection = await getMongoDb();
+    if (connection.isConnected && connection.db) {
+      const collection = connection.db.collection('orders');
+      await collection.deleteMany({});
+      return NextResponse.json({ success: true });
+    } else {
+      serverState.memoryOrders = [];
+      return NextResponse.json({ success: true });
+    }
+  } catch (error: any) {
+    return NextResponse.json({ error: error?.message || 'Failed to clear orders' }, { status: 500 });
+  }
+}
