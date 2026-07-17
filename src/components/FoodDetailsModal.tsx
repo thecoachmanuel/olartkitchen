@@ -124,7 +124,7 @@ export default function FoodDetailsModal({
               <div className="w-full h-3 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-amber-500 rounded-full transition-all duration-500"
-                  style={{ width: \`\${Math.min(100, (item.currentPreOrders / item.maxPreOrders) * 100)}%\` }}
+                  style={{ width: `${Math.min(100, (item.currentPreOrders / item.maxPreOrders) * 100)}%` }}
                 />
               </div>
             </div>

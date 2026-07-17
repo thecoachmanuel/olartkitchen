@@ -107,6 +107,7 @@ export default function AdminPanel({
   onDeleteUser,
   onUpdateUser,
   onBroadcastNotification,
+  onClearOrders,
 }: AdminPanelProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -119,12 +120,12 @@ export default function AdminPanel({
   const [loginError, setLoginError] = useState('');
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'food' | 'orders' | 'categories' | 'settings' | 'promo' | 'addons' | 'assistant'>(() => {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'food' | 'orders' | 'categories' | 'settings' | 'promo' | 'addons' | 'assistant' | 'users'>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab');
-      if (tab === 'dashboard' || tab === 'food' || tab === 'orders' || tab === 'categories' || tab === 'settings' || tab === 'promo' || tab === 'addons' || tab === 'assistant') {
-        return tab as 'dashboard' | 'food' | 'orders' | 'categories' | 'settings' | 'promo' | 'addons' | 'assistant';
+      if (tab === 'dashboard' || tab === 'food' || tab === 'orders' || tab === 'categories' || tab === 'settings' || tab === 'promo' || tab === 'addons' || tab === 'assistant' || tab === 'users') {
+        return tab as 'dashboard' | 'food' | 'orders' | 'categories' | 'settings' | 'promo' | 'addons' | 'assistant' | 'users';
       }
     }
     return 'dashboard';

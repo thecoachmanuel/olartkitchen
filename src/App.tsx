@@ -1746,6 +1746,19 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
         )}
       </AnimatePresence>
 
+      {/* FOOD DETAILS MODAL */}
+      <AnimatePresence>
+        {selectedFoodItem && (
+          <FoodDetailsModal
+            item={selectedFoodItem}
+            onClose={() => setSelectedFoodItem(null)}
+            cartQuantity={cart.find((c) => c.foodItem.id === selectedFoodItem.id)?.quantity || 0}
+            onAddToCart={handleAddToCart}
+            onUpdateQuantity={handleUpdateQuantity}
+          />
+        )}
+      </AnimatePresence>
+
       {/* USER PORTAL & ORDER TRACKER SIDEBAR */}
       <AnimatePresence>
         {isUserPortalOpen && (
