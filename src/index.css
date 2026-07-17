@@ -82,3 +82,10 @@ textarea::placeholder {
   color: rgba(115, 115, 115, 0.5) !important; /* very light neutral-500 gray for dark mode */
 }
 
+
+/* Prevent iOS input zoom on mobile */
+@media screen and (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}

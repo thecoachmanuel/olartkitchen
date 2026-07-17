@@ -691,8 +691,13 @@ export default function AdminPanel({
       <div className="hidden lg:flex flex-col w-64 bg-white dark:bg-neutral-950 border border-neutral-200/50 dark:border-neutral-800/50 rounded-2xl p-5 shrink-0 sticky top-28 self-stretch min-h-[520px]">
         <div className="mb-6 pb-4 border-b border-neutral-100 dark:border-neutral-900">
           <div className="flex items-center gap-2">
+            {adminSettings.logoImage ? (
+              <img src={adminSettings.logoImage} alt="Logo" className="w-6 h-6 rounded-md object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              <span className="text-sm">{adminSettings.logoEmoji || '🍳'}</span>
+            )}
             <span className="text-sm font-extrabold text-neutral-900 dark:text-neutral-50 uppercase tracking-wider">
-              🍳 {adminSettings.logoName || 'Olart Admin'}
+              {adminSettings.logoName || 'Olart Admin'}
             </span>
           </div>
           <p className="text-[10px] text-neutral-400 dark:text-neutral-500 font-semibold mt-1">Admin Control Room</p>
@@ -793,9 +798,16 @@ export default function AdminPanel({
             >
               <div className="space-y-6">
                 <div className="flex items-center justify-between pb-4 border-b border-neutral-100 dark:border-neutral-900">
-                  <span className="text-sm font-extrabold text-neutral-900 dark:text-neutral-50 uppercase tracking-wider">
-                    🍳 {adminSettings.logoName || 'Olart Admin'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {adminSettings.logoImage ? (
+                      <img src={adminSettings.logoImage} alt="Logo" className="w-6 h-6 rounded-md object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className="text-sm">{adminSettings.logoEmoji || '🍳'}</span>
+                    )}
+                    <span className="text-sm font-extrabold text-neutral-900 dark:text-neutral-50 uppercase tracking-wider">
+                      {adminSettings.logoName || 'Olart Admin'}
+                    </span>
+                  </div>
                   <button
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 cursor-pointer"
