@@ -7,10 +7,11 @@ import React, { useState, useEffect } from 'react';
 import { 
   KeyRound, LogOut, LayoutDashboard, Utensils, ShoppingCart, Settings, 
   Plus, Edit2, Trash2, CheckCircle2, AlertCircle, TrendingUp, DollarSign, Users, Clock, ToggleLeft, ToggleRight, X, SlidersHorizontal, Upload, Sparkles, Mail, Phone, Menu,
-  Gift, Send, Loader2
+  Gift, Send, Loader2, Bot
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FoodItem, Order, AdminSettings } from '../types';
+import { AiAssistant } from './AiAssistant';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -110,12 +111,12 @@ export default function AdminPanel({
   const [loginError, setLoginError] = useState('');
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'food' | 'orders' | 'categories' | 'settings' | 'promo' | 'addons'>(() => {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'food' | 'orders' | 'categories' | 'settings' | 'promo' | 'addons' | 'assistant'>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab');
-      if (tab === 'dashboard' || tab === 'food' || tab === 'orders' || tab === 'categories' || tab === 'settings' || tab === 'promo' || tab === 'addons') {
-        return tab as 'dashboard' | 'food' | 'orders' | 'categories' | 'settings' | 'promo' | 'addons';
+      if (tab === 'dashboard' || tab === 'food' || tab === 'orders' || tab === 'categories' || tab === 'settings' || tab === 'promo' || tab === 'addons' || tab === 'assistant') {
+        return tab as 'dashboard' | 'food' | 'orders' | 'categories' | 'settings' | 'promo' | 'addons' | 'assistant';
       }
     }
     return 'dashboard';
@@ -667,7 +668,8 @@ export default function AdminPanel({
   }
 
   const navigationItems = [
-    { id: 'dashboard' as const, label: 'Stats Summary', icon: LayoutDashboard },
+    { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'assistant' as const, label: 'AI Assistant', icon: Bot },
     { id: 'food' as const, label: 'Food Items', icon: Utensils },
     { id: 'categories' as const, label: 'Meal Categories', icon: SlidersHorizontal },
     { id: 'addons' as const, label: 'Premium Sides', icon: Sparkles },
@@ -865,6 +867,7 @@ export default function AdminPanel({
           </h2>
           <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 font-light">
             {activeTab === 'dashboard' && 'Visual statistics, pre-order totals, active trends, and real-time ledger status.'}
+            {activeTab === 'assistant' && 'Your AI Assistant powered by Gemini to help manage the kitchen.'}
             {activeTab === 'food' && 'Manage food item inventory, upload photos, change prices, and set available stocks.'}
             {activeTab === 'categories' && 'Add and rename meal categories to organize the pre-order catalog.'}
             {activeTab === 'addons' && 'Configure premium sides and addons available to customers during checkout.'}
@@ -876,6 +879,16 @@ export default function AdminPanel({
 
         <div className="min-h-[45vh]" id="admin-panel-content">
         
+        {/* TAB: AI ASSISTANT */}
+        {activeTab === 'assistant' && (
+          <AiAssistant
+            foodItems={foodItems}
+            orders={orders}
+            settings={adminSettings}
+            categories={categories}
+          />
+        )}
+
         {/* TAB 1: DASHBOARD STATS */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">

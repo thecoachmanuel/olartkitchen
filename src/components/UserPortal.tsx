@@ -668,7 +668,7 @@ export default function UserPortal({
                                           <span>
                                             {order.deliveryMethod === 'delivery' 
                                               ? `Dispatched! Your hot Nigerian meal is on its way to your address: ${order.deliveryAddress || 'Delivery Address'}`
-                                              : `Ready for Pickup! Come on down to ${adminSettings.logoName || 'Olart Kitchen'} for instant collection. Safe travels!`
+                                              : `Ready for Pickup! Come on down to ${adminSettings?.logoName || 'Olart Kitchen'} for instant collection. Safe travels!`
                                             }
                                           </span>
                                         </>
@@ -830,7 +830,7 @@ export default function UserPortal({
                                             <Truck size={18} />
                                           </div>
                                           <div>
-                                            <h5 className="text-xs font-black text-neutral-900 dark:text-white">{(adminSettings.logoName || 'Olart').split(' ')[0]} Dispatch Service</h5>
+                                            <h5 className="text-xs font-black text-neutral-900 dark:text-white">{(adminSettings?.logoName || 'Olart').split(' ')[0]} Dispatch Service</h5>
                                             <p className="text-[10px] text-neutral-500">Premium door-to-door delivery</p>
                                           </div>
                                         </div>
@@ -900,7 +900,7 @@ export default function UserPortal({
                                             <MapPin size={18} />
                                           </div>
                                           <div>
-                                            <h5 className="text-xs font-black text-neutral-900 dark:text-white">{adminSettings.logoName || 'Olart Kitchen'} Collection Point</h5>
+                                            <h5 className="text-xs font-black text-neutral-900 dark:text-white">{adminSettings?.logoName || 'Olart Kitchen'} Collection Point</h5>
                                             <p className="text-[10px] text-neutral-500">Pick up your order straight from the source</p>
                                           </div>
                                         </div>
