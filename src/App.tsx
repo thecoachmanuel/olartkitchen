@@ -916,6 +916,10 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
     fetch(`/api/users/${encodeURIComponent(email)}`, {
       method: 'DELETE'
     }).catch(console.error);
+    
+    if (currentUser && currentUser.email.toLowerCase() === email.toLowerCase()) {
+      handleUserLogout();
+    }
   };
 
   const handleUpdateUser = (email: string, data: any) => {
