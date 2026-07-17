@@ -19,6 +19,8 @@ export interface FoodItem {
 export interface CartItem {
   foodItem: FoodItem;
   quantity: number;
+  notes?: string;
+  addons?: { id: string; name: string; price: number }[];
 }
 
 export interface Order {
@@ -33,6 +35,8 @@ export interface Order {
     name: string;
     price: number;
     quantity: number;
+    notes?: string;
+    addons?: { id: string; name: string; price: number }[];
   }[];
   totalAmount: number;
   status: 'pending' | 'paid' | 'preparing' | 'confirmed' | 'cancelled';

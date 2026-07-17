@@ -54,7 +54,10 @@ export default function CheckoutModal({
 
   if (!isOpen) return null;
 
-  const totalAmount = cart.reduce((sum, item) => sum + item.foodItem.price * item.quantity, 0);
+  const totalAmount = cart.reduce((sum, item) => {
+    const addonsSum = item.addons?.reduce((s, a) => s + a.price, 0) || 0;
+    return sum + (item.foodItem.price + addonsSum) * item.quantity;
+  }, 0);
 
   // Format currency
   const formatNaira = (value: number) => {
@@ -115,7 +118,20 @@ export default function CheckoutModal({
     }
 
     const itemsSummary = createdOrder.items
-      .map((item) => `• ${item.name} (${formatNaira(item.price)} each) x ${item.quantity} = ${formatNaira(item.price * item.quantity)}`)
+      .map((item) => {
+        const addonsSum = item.addons?.reduce((s, a) => s + a.price, 0) || 0;
+        const subtotal = (item.price + addonsSum) * item.quantity;
+        let line = `• ${item.name} (${formatNaira(item.price)} each) x ${item.quantity}`;
+        if (item.addons && item.addons.length > 0) {
+          const addonsNames = item.addons.map(a => `${a.name} (+${formatNaira(a.price)})`).join(', ');
+          line += `\n   Addons: [${addonsNames}]`;
+        }
+        if (item.notes) {
+          line += `\n   Note: "${item.notes}"`;
+        }
+        line += ` = ${formatNaira(subtotal)}`;
+        return line;
+      })
       .join('\n');
 
     const messageText = 
@@ -191,17 +207,37 @@ export default function CheckoutModal({
                 <p className="text-sm font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500 mb-2">
                   Order Summary
                 </p>
-                <div className="divide-y divide-neutral-100 dark:divide-neutral-900 max-h-[120px] overflow-y-auto pr-1">
-                  {cart.map((item) => (
-                    <div key={item.foodItem.id} className="py-2 flex justify-between items-center text-sm">
-                      <span className="text-neutral-700 dark:text-neutral-300 font-medium">
-                        {item.foodItem.name} <span className="text-xs text-neutral-400 font-semibold">x{item.quantity}</span>
-                      </span>
-                      <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-                        {formatNaira(item.foodItem.price * item.quantity)}
-                      </span>
-                    </div>
-                  ))}
+                <div className="divide-y divide-neutral-100 dark:divide-neutral-900 max-h-[160px] overflow-y-auto pr-1">
+                  {cart.map((item) => {
+                    const itemAddonsCost = item.addons?.reduce((s, a) => s + a.price, 0) || 0;
+                    const itemTotal = (item.foodItem.price + itemAddonsCost) * item.quantity;
+                    return (
+                      <div key={item.foodItem.id} className="py-2.5 space-y-1">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-neutral-700 dark:text-neutral-300 font-medium">
+                            {item.foodItem.name} <span className="text-xs text-neutral-400 font-semibold">x{item.quantity}</span>
+                          </span>
+                          <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+                            {formatNaira(itemTotal)}
+                          </span>
+                        </div>
+                        {item.addons && item.addons.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pl-2">
+                            {item.addons.map((add) => (
+                              <span key={add.id} className="text-[9px] bg-amber-500/10 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded font-medium">
+                                + {add.name} ({formatNaira(add.price)})
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {item.notes && (
+                          <p className="text-[10px] text-neutral-500 dark:text-neutral-400 pl-2 italic">
+                            "Note: {item.notes}"
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
                 <div className="flex justify-between items-center pt-2 mt-2 border-t border-neutral-200 dark:border-neutral-800 font-bold text-base text-neutral-950 dark:text-neutral-50">
                   <span>Grand Total</span>

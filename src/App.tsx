@@ -7,7 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ShoppingBag, Search, Sparkles, Sun, Moon, SlidersHorizontal, 
-  Trash2, X, AlertCircle, RefreshCw, KeyRound, ArrowRight, Utensils, Heart, Check, Info, User as UserIcon, Phone
+  Trash2, X, AlertCircle, RefreshCw, KeyRound, ArrowRight, Utensils, Heart, Check, Info, User as UserIcon, Phone,
+  Plus, Truck
 } from 'lucide-react';
 import { FoodItem, CartItem, Order, AdminSettings, User } from './types';
 import { INITIAL_FOOD_ITEMS, DEFAULT_ADMIN_SETTINGS, FOOD_CATEGORIES, SEED_ORDERS } from './data';
@@ -325,7 +326,10 @@ export default function App() {
     deliveryAddress?: string;
     password?: string;
   }): Order => {
-    const totalAmount = cart.reduce((sum, item) => sum + item.foodItem.price * item.quantity, 0);
+    const totalAmount = cart.reduce((sum, item) => {
+      const addonsSum = item.addons?.reduce((s, a) => s + a.price, 0) || 0;
+      return sum + (item.foodItem.price + addonsSum) * item.quantity;
+    }, 0);
     const orderId = `OLART-${Math.floor(1000 + Math.random() * 9000)}-NG`;
     const paymentRef = `TXREF-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
@@ -341,6 +345,8 @@ export default function App() {
         name: it.foodItem.name,
         price: it.foodItem.price,
         quantity: it.quantity,
+        notes: it.notes,
+        addons: it.addons,
       })),
       totalAmount,
       status: 'pending',
@@ -702,7 +708,10 @@ export default function App() {
   });
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const cartTotal = cart.reduce((sum, item) => sum + item.foodItem.price * item.quantity, 0);
+  const cartTotal = cart.reduce((sum, item) => {
+    const addonsSum = item.addons?.reduce((s, a) => s + a.price, 0) || 0;
+    return sum + (item.foodItem.price + addonsSum) * item.quantity;
+  }, 0);
 
   // Format currency
   const formatNaira = (value: number) => {
@@ -1099,6 +1108,26 @@ export default function App() {
 
               {/* Cart Body list */}
               <div className="flex-1 p-5 overflow-y-auto space-y-4">
+                {cart.length > 0 && (
+                  <div className="p-4 bg-amber-500/5 dark:bg-amber-500/5 border border-amber-500/10 rounded-2xl space-y-2">
+                    <div className="flex justify-between text-[11px] font-bold">
+                      <span className="text-neutral-600 dark:text-neutral-400 flex items-center gap-1">
+                        <Sparkles size={11} className="text-amber-500 animate-spin" />
+                        <span>Pre-Order Milestones</span>
+                      </span>
+                      <span className="text-amber-600 dark:text-amber-400">
+                        {cartTotal >= 15000 ? '🎉 Free Signature Hibiscus Zobo Unlocked!' : `Add ${formatNaira(15000 - cartTotal)} more for Free Drink!`}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-amber-500 transition-all duration-500 rounded-full"
+                        style={{ width: `${Math.min((cartTotal / 15000) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {cart.length === 0 ? (
                   <div className="text-center py-16 text-neutral-400 space-y-3">
                     <ShoppingBag size={48} className="mx-auto text-neutral-200 dark:text-neutral-800" />
@@ -1108,50 +1137,151 @@ export default function App() {
                     </p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-neutral-100 dark:divide-neutral-800/50">
+                  <div className="space-y-4">
                     {cart.map((item) => (
-                      <div key={item.foodItem.id} className="py-4 flex gap-3.5">
-                        <img
-                          src={item.foodItem.image}
-                          alt={item.foodItem.name}
-                          className="w-14 h-14 rounded-xl object-cover bg-neutral-100 dark:bg-neutral-800"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <h4 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 truncate">
-                            {item.foodItem.name}
-                          </h4>
-                          <p className="text-xs font-semibold text-amber-500 font-mono">
-                            {formatNaira(item.foodItem.price)} each
-                          </p>
-                          
-                          {/* Quantity Counter for slide-over */}
-                          <div className="flex items-center justify-between pt-1">
-                            <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 rounded-lg p-0.5 border border-neutral-200/50 dark:border-neutral-700/20 text-xs font-semibold">
+                      <div key={item.foodItem.id} className="p-4 rounded-2xl bg-neutral-50/50 dark:bg-neutral-900/40 border border-neutral-100 dark:border-neutral-800/40 space-y-3">
+                        <div className="flex gap-3.5">
+                          <img
+                            src={item.foodItem.image}
+                            alt={item.foodItem.name}
+                            className="w-14 h-14 rounded-xl object-cover bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/20 dark:border-neutral-800 shadow-sm shrink-0"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <h4 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 truncate">
+                              {item.foodItem.name}
+                            </h4>
+                            <p className="text-xs font-semibold text-amber-500 font-mono">
+                              {formatNaira(item.foodItem.price)} each
+                            </p>
+                            
+                            {/* Quantity Counter for slide-over */}
+                            <div className="flex items-center justify-between pt-1">
+                              <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 rounded-lg p-0.5 border border-neutral-200/50 dark:border-neutral-700/20 text-xs font-semibold">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateQuantity(item.foodItem.id, item.quantity - 1)}
+                                  className="px-2 py-0.5 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded cursor-pointer transition-all"
+                                >
+                                  -
+                                </button>
+                                <span className="px-3.5 font-mono text-xs">{item.quantity}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateQuantity(item.foodItem.id, item.quantity + 1)}
+                                  className="px-2 py-0.5 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded cursor-pointer transition-all"
+                                >
+                                  +
+                                </button>
+                              </div>
+                              
                               <button
-                                onClick={() => handleUpdateQuantity(item.foodItem.id, item.quantity - 1)}
-                                className="px-2 py-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded cursor-pointer"
+                                type="button"
+                                onClick={() => handleRemoveFromCart(item.foodItem.id)}
+                                className="p-1 rounded text-neutral-400 hover:text-red-500 cursor-pointer transition-colors"
+                                title="Remove item"
+                                id={`remove-item-${item.foodItem.id}`}
                               >
-                                -
-                              </button>
-                              <span className="px-3.5 font-mono text-xs">{item.quantity}</span>
-                              <button
-                                onClick={() => handleUpdateQuantity(item.foodItem.id, item.quantity + 1)}
-                                className="px-2 py-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded cursor-pointer"
-                              >
-                                +
+                                <Trash2 size={13} />
                               </button>
                             </div>
-                            
-                            <button
-                              onClick={() => handleRemoveFromCart(item.foodItem.id)}
-                              className="p-1 rounded text-neutral-400 hover:text-red-500 cursor-pointer"
-                              title="Remove item"
-                              id={`remove-item-${item.foodItem.id}`}
-                            >
-                              <Trash2 size={13} />
-                            </button>
                           </div>
+                        </div>
+
+                        {/* Interactive Side items selector & chef notes */}
+                        <div className="bg-white dark:bg-neutral-950 p-3 rounded-xl border border-neutral-200/40 dark:border-neutral-800/40 space-y-3">
+                          <div>
+                            <span className="text-[9px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block mb-1.5">
+                              Premium Sides / Addons:
+                            </span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {[
+                                { id: 'plantain', name: 'Fried Plantain (Dodo)', price: 1500 },
+                                { id: 'egg', name: 'Boiled Egg', price: 1000 },
+                                { id: 'assorted', name: 'Assorted Meat', price: 2500 },
+                                { id: 'chicken', name: 'Grilled Chicken', price: 3500 },
+                              ].map((addon) => {
+                                const isSelected = item.addons?.some(a => a.id === addon.id) || false;
+                                return (
+                                  <button
+                                    type="button"
+                                    key={addon.id}
+                                    onClick={() => {
+                                      const currentAddons = item.addons || [];
+                                      const nextAddons = isSelected
+                                        ? currentAddons.filter(a => a.id !== addon.id)
+                                        : [...currentAddons, addon];
+                                      setCart(prev => prev.map(c => 
+                                        c.foodItem.id === item.foodItem.id ? { ...c, addons: nextAddons } : c
+                                      ));
+                                    }}
+                                    className={`text-[9px] px-2 py-1 rounded-lg font-extrabold border transition-all flex items-center gap-1 cursor-pointer ${
+                                      isSelected
+                                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
+                                        : 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
+                                    }`}
+                                  >
+                                    {isSelected ? <Check size={8} className="text-amber-500" /> : <Plus size={8} />}
+                                    <span>{addon.name} (+₦{addon.price.toLocaleString()})</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Quick Preset Actions & Custom notes input */}
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[9px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block">
+                                Customization Notes:
+                              </span>
+                              <div className="flex gap-1">
+                                {['No onions', 'Extra spicy', 'Separate stew'].map((preset) => {
+                                  const isSelected = item.notes === preset;
+                                  return (
+                                    <button
+                                      type="button"
+                                      key={preset}
+                                      onClick={() => {
+                                        setCart(prev => prev.map(c => 
+                                          c.foodItem.id === item.foodItem.id 
+                                            ? { ...c, notes: isSelected ? '' : preset } 
+                                            : c
+                                        ));
+                                      }}
+                                      className={`text-[9px] px-1.5 py-0.5 rounded transition-all cursor-pointer ${
+                                        isSelected
+                                          ? 'bg-amber-500 text-white font-black'
+                                          : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+                                      }`}
+                                    >
+                                      {preset}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="e.g. Put stew separately, no pepper..."
+                              value={item.notes || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setCart(prev => prev.map(c => 
+                                  c.foodItem.id === item.foodItem.id ? { ...c, notes: val } : c
+                                ));
+                              }}
+                              className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 placeholder-neutral-400 dark:placeholder-neutral-600 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Portion Subtotal Recalculation */}
+                        <div className="flex justify-between items-center text-xs text-neutral-500 dark:text-neutral-400 pt-1 border-t border-neutral-200/30 dark:border-neutral-800/20">
+                          <span className="font-semibold">Subtotal</span>
+                          <span className="font-mono font-bold text-neutral-800 dark:text-neutral-200">
+                            {formatNaira((item.foodItem.price + (item.addons?.reduce((s, a) => s + a.price, 0) || 0)) * item.quantity)}
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -1162,9 +1292,15 @@ export default function App() {
               {/* Cart Footer */}
               {cart.length > 0 && (
                 <div className="p-5 border-t border-neutral-200 dark:border-neutral-800 space-y-4 bg-neutral-50 dark:bg-neutral-950/40">
+                  {/* Delivery Transparency Indicator */}
+                  <div className="p-3 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200/40 dark:border-neutral-800/40 text-[10px] text-neutral-500 leading-relaxed flex items-center gap-2">
+                    <Truck size={14} className="text-amber-500 shrink-0 animate-bounce" />
+                    <span>Active Delivery Partners active in Lekki, Victoria Island, Ikoyi, Ikeja & surroundings! Standard self-pickup at Admirality Way is completely free.</span>
+                  </div>
+
                   <div className="flex justify-between items-center font-bold text-sm">
                     <span className="text-neutral-500 dark:text-neutral-400">Total Pre-order cost</span>
-                    <span className="text-lg font-mono text-amber-600 dark:text-amber-400">
+                    <span className="text-lg font-mono text-amber-600 dark:text-amber-400 font-extrabold">
                       {formatNaira(cartTotal)}
                     </span>
                   </div>
@@ -1221,6 +1357,7 @@ export default function App() {
             onRegister={handleUserRegister}
             onLogout={handleUserLogout}
             formatNaira={formatNaira}
+            adminSettings={adminSettings}
           />
         )}
       </AnimatePresence>
