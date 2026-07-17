@@ -118,7 +118,14 @@ export const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
   contactHours: 'Monday - Saturday: 9:00 AM - 9:00 PM, Sunday: 12:00 PM - 8:00 PM',
   contactDescription: 'Have questions about our premium Nigerian dishes, custom event catering, or pre-order deliveries? Reach out to our culinary experts!',
   promoMinAmount: 15000,
-  promoRewardName: 'Free bottle of legendary Hibiscus Zobo'
+  promoRewardName: 'Free bottle of legendary Hibiscus Zobo',
+  promoEnabled: true,
+  addons: [
+    { id: 'plantain', name: 'Fried Plantain (Dodo)', price: 1500 },
+    { id: 'egg', name: 'Boiled Egg', price: 1000 },
+    { id: 'assorted', name: 'Assorted Meat', price: 2500 },
+    { id: 'chicken', name: 'Grilled Chicken', price: 3500 },
+  ]
 };
 
 export const FOOD_CATEGORIES = ['All', 'Rice Platters', 'Swallow & Soups', 'Ewa Aganyin & Beans', 'Grills & Suya', 'Chops & Sweet Things'];

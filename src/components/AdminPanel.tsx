@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   KeyRound, LogOut, LayoutDashboard, Utensils, ShoppingCart, Settings, 
   Plus, Edit2, Trash2, CheckCircle2, AlertCircle, TrendingUp, DollarSign, Users, Clock, ToggleLeft, ToggleRight, X, SlidersHorizontal, Upload, Sparkles, Mail, Phone, Menu,
-  Gift, Send
+  Gift, Send, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FoodItem, Order, AdminSettings } from '../types';
@@ -110,7 +110,16 @@ export default function AdminPanel({
   const [loginError, setLoginError] = useState('');
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'food' | 'orders' | 'categories' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'food' | 'orders' | 'categories' | 'settings' | 'promo'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab === 'dashboard' || tab === 'food' || tab === 'orders' || tab === 'categories' || tab === 'settings' || tab === 'promo') {
+        return tab as 'dashboard' | 'food' | 'orders' | 'categories' | 'settings' | 'promo';
+      }
+    }
+    return 'dashboard';
+  });
 
   // Orders Filter State
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'new' | 'paid' | 'preparing' | 'ready' | 'cancelled'>('all');
@@ -220,12 +229,31 @@ export default function AdminPanel({
   const [settingsContactDescription, setSettingsContactDescription] = useState(adminSettings.contactDescription || 'Have questions about our premium Nigerian dishes, custom event catering, or pre-order deliveries? Reach out to our culinary experts!');
   const [settingsPromoMinAmount, setSettingsPromoMinAmount] = useState(adminSettings.promoMinAmount ?? 15000);
   const [settingsPromoRewardName, setSettingsPromoRewardName] = useState(adminSettings.promoRewardName || 'Free bottle of legendary Hibiscus Zobo');
+  const [settingsPromoEnabled, setSettingsPromoEnabled] = useState(() => adminSettings.promoEnabled !== false);
+  const [settingsAddons, setSettingsAddons] = useState<{ id: string; name: string; price: number }[]>(() => adminSettings.addons || []);
+  const [newAddonName, setNewAddonName] = useState('');
+  const [newAddonPrice, setNewAddonPrice] = useState('');
   const [settingsSavedMessage, setSettingsSavedMessage] = useState(false);
+  const [promoSavedMessage, setPromoSavedMessage] = useState(false);
+  const [promoCopiedId, setPromoCopiedId] = useState<string | null>(null);
 
   // Live from Kitchen form state
   const [kitchenLivePreset, setKitchenLivePreset] = useState('Olart is seasoning the fresh croaker fish for our Signature Seafood Okro!');
   const [kitchenLiveMessage, setKitchenLiveMessage] = useState('');
   const [kitchenLiveSentMessage, setKitchenLiveSentMessage] = useState(false);
+
+  const handleAddAddon = () => {
+    if (!newAddonName.trim()) return;
+    const price = Number(newAddonPrice) || 0;
+    const id = 'addon-' + Date.now();
+    setSettingsAddons(prev => [...prev, { id, name: newAddonName.trim(), price }]);
+    setNewAddonName('');
+    setNewAddonPrice('');
+  };
+
+  const handleRemoveAddon = (id: string) => {
+    setSettingsAddons(prev => prev.filter(addon => addon.id !== id));
+  };
 
   useEffect(() => {
     if (adminSettings) {
@@ -247,8 +275,25 @@ export default function AdminPanel({
       setSettingsContactDescription(adminSettings.contactDescription || 'Have questions about our premium Nigerian dishes, custom event catering, or pre-order deliveries? Reach out to our culinary experts!');
       setSettingsPromoMinAmount(adminSettings.promoMinAmount ?? 15000);
       setSettingsPromoRewardName(adminSettings.promoRewardName || 'Free bottle of legendary Hibiscus Zobo');
+      setSettingsPromoEnabled(adminSettings.promoEnabled !== false);
+      setSettingsAddons(adminSettings.addons || []);
     }
   }, [adminSettings]);
+
+  // Sync activeTab state to URL search parameters
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('view') === 'admin') {
+        const currentTab = params.get('tab');
+        if (currentTab !== activeTab) {
+          params.set('tab', activeTab);
+          const newUrl = `${window.location.pathname}?${params.toString()}`;
+          window.history.replaceState({ ...window.history.state }, '', newUrl);
+        }
+      }
+    }
+  }, [activeTab]);
 
   const [isDragOverLogo, setIsDragOverLogo] = useState(false);
 
@@ -463,9 +508,23 @@ export default function AdminPanel({
       contactDescription: settingsContactDescription,
       promoMinAmount: Number(settingsPromoMinAmount) || 0,
       promoRewardName: settingsPromoRewardName,
+      promoEnabled: settingsPromoEnabled,
+      addons: settingsAddons,
     });
     setSettingsSavedMessage(true);
     setTimeout(() => setSettingsSavedMessage(false), 3000);
+  };
+
+  const handleSavePromo = (e: React.FormEvent) => {
+    e.preventDefault();
+    onUpdateSettings({
+      ...adminSettings,
+      promoMinAmount: Number(settingsPromoMinAmount) || 0,
+      promoRewardName: settingsPromoRewardName,
+      promoEnabled: settingsPromoEnabled,
+    });
+    setPromoSavedMessage(true);
+    setTimeout(() => setPromoSavedMessage(false), 3000);
   };
 
   // Calculate stats values
@@ -475,6 +534,11 @@ export default function AdminPanel({
 
   const pendingPayments = orders.filter(o => o.status === 'pending').length;
   const activeTimersCount = foodItems.filter(item => new Date(item.closeTime).getTime() > Date.now() && item.available).length;
+
+  // Promo qualified orders
+  const qualifiedOrders = orders.filter(
+    order => order.status !== 'cancelled' && order.totalAmount >= settingsPromoMinAmount
+  );
 
   // Chart data calculations
   const salesByDate: { [key: string]: number } = {};
@@ -595,7 +659,8 @@ export default function AdminPanel({
     { id: 'dashboard' as const, label: 'Stats Summary', icon: LayoutDashboard },
     { id: 'food' as const, label: 'Food Items', icon: Utensils },
     { id: 'categories' as const, label: 'Meal Categories', icon: SlidersHorizontal },
-    { id: 'orders' as const, label: `Orders Ledger (${orders.length})`, icon: ShoppingCart },
+    { id: 'orders' as const, label: 'Orders Ledger', icon: ShoppingCart, badge: orders.length },
+    { id: 'promo' as const, label: 'Milestone Promo', icon: Gift, badge: settingsPromoEnabled ? qualifiedOrders.length : 0 },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
 
@@ -627,15 +692,26 @@ export default function AdminPanel({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                   isActive
                     ? 'bg-amber-500 text-white shadow-md shadow-amber-500/10'
                     : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900'
                 }`}
                 id={`tab-admin-desktop-${item.id}`}
               >
-                <IconComponent size={15} className="shrink-0" />
-                <span>{item.label}</span>
+                <div className="flex items-center gap-3">
+                  <IconComponent size={15} className="shrink-0" />
+                  <span>{item.label}</span>
+                </div>
+                {item.badge !== undefined && (
+                  <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black leading-none ${
+                    isActive
+                      ? 'bg-white text-amber-600'
+                      : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200/55 dark:border-neutral-700/55'
+                  }`}>
+                    {item.badge}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -725,15 +801,26 @@ export default function AdminPanel({
                           setActiveTab(item.id);
                           setIsMobileMenuOpen(false);
                         }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
+                        className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                           isActive
                             ? 'bg-amber-500 text-white shadow-md shadow-amber-500/10'
                             : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900'
                         }`}
                         id={`tab-admin-mobile-${item.id}`}
                       >
-                        <IconComponent size={15} className="shrink-0" />
-                        <span>{item.label}</span>
+                        <div className="flex items-center gap-3">
+                          <IconComponent size={15} className="shrink-0" />
+                          <span>{item.label}</span>
+                        </div>
+                        {item.badge !== undefined && (
+                          <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black leading-none ${
+                            isActive
+                              ? 'bg-white text-amber-600'
+                              : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200/55 dark:border-neutral-700/55'
+                          }`}>
+                            {item.badge}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -769,6 +856,7 @@ export default function AdminPanel({
             {activeTab === 'food' && 'Manage food item inventory, upload photos, change prices, and set available stocks.'}
             {activeTab === 'categories' && 'Add and rename meal categories to organize the pre-order catalog.'}
             {activeTab === 'orders' && 'Confirm customer pre-orders, update kitchen workflow states, and review customer contact cards.'}
+            {activeTab === 'promo' && 'Configure and monitor pre-order milestone promo rewards, minimum spend thresholds, and qualified customers.'}
             {activeTab === 'settings' && 'Update delivery configurations, banking details, countdown clocks, and custom brand assets.'}
           </p>
         </div>
@@ -1747,44 +1835,87 @@ export default function AdminPanel({
                 )}
               </div>
 
-              {/* Milestone Promo Configuration */}
-              <div className="p-4 rounded-xl border border-neutral-200/60 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-neutral-950/20 space-y-4">
-                <h3 className="text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wide flex items-center gap-1.5">
-                  <Gift size={14} className="text-amber-500" />
-                  <span>Pre-Order Milestone Promo</span>
-                </h3>
-                <p className="text-[11px] text-neutral-500 leading-normal">
-                  Set the dynamic minimum order threshold and reward item name. This updates the user's cart progress bar in real time.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label htmlFor="settings-promo-amount" className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                      Minimum Order Amount (₦)
-                    </label>
-                    <input
-                      id="settings-promo-amount"
-                      type="number"
-                      required
-                      value={settingsPromoMinAmount}
-                      onChange={(e) => setSettingsPromoMinAmount(Number(e.target.value) || 0)}
-                      placeholder="e.g. 15000"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono"
-                    />
+              {/* Premium Sides / Addons Management */}
+              <div className="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950/40 space-y-4">
+                <div>
+                  <h3 className="text-xs font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
+                    Premium Sides / Addons Config
+                  </h3>
+                  <p className="text-[11px] text-neutral-500 leading-normal mt-0.5">
+                    Manage food sides/addons offered to users during checkout. Only addons listed here will be shown to customers.
+                  </p>
+                </div>
+
+                {/* Addon Form & List */}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                    <div className="sm:col-span-6 space-y-1">
+                      <label htmlFor="new-addon-name" className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">
+                        Addon Name
+                      </label>
+                      <input
+                        id="new-addon-name"
+                        type="text"
+                        placeholder="e.g. Extra Turkey, Cold Chapman"
+                        className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-sans"
+                        value={newAddonName}
+                        onChange={(e) => setNewAddonName(e.target.value)}
+                      />
+                    </div>
+                    <div className="sm:col-span-4 space-y-1">
+                      <label htmlFor="new-addon-price" className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">
+                        Addon Price (₦)
+                      </label>
+                      <input
+                        id="new-addon-price"
+                        type="number"
+                        placeholder="e.g. 2000"
+                        className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono"
+                        value={newAddonPrice}
+                        onChange={(e) => setNewAddonPrice(e.target.value)}
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <button
+                        type="button"
+                        onClick={handleAddAddon}
+                        className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-neutral-950 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm"
+                      >
+                        <Plus size={14} />
+                        <span>Add</span>
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label htmlFor="settings-promo-reward" className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                      Promo Reward / Free Gift Name
-                    </label>
-                    <input
-                      id="settings-promo-reward"
-                      type="text"
-                      required
-                      value={settingsPromoRewardName}
-                      onChange={(e) => setSettingsPromoRewardName(e.target.value)}
-                      placeholder="e.g. Free bottle of legendary Hibiscus Zobo"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 font-sans"
-                    />
+                  {/* Addons List */}
+                  <div className="space-y-2 mt-2">
+                    {settingsAddons.length === 0 ? (
+                      <p className="text-[11px] text-neutral-400 italic text-center py-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-xl border border-dashed border-neutral-200 dark:border-neutral-800">
+                        No active addons configured. Customers will see no addons available.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
+                        {settingsAddons.map((addon) => (
+                          <div 
+                            key={addon.id}
+                            className="flex items-center justify-between p-2.5 rounded-xl border border-neutral-200/60 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-neutral-900/10 text-xs"
+                          >
+                            <div className="font-semibold text-neutral-800 dark:text-neutral-200 flex flex-col">
+                              <span>{addon.name}</span>
+                              <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">₦{addon.price.toLocaleString()}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveAddon(addon.id)}
+                              className="p-1 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer"
+                              title="Delete Addon"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1885,6 +2016,224 @@ export default function AdminPanel({
                 Save Settings
               </button>
             </form>
+          </div>
+        )}
+
+        {/* TAB: MILESTONE PROMO */}
+        {activeTab === 'promo' && (
+          <div className="max-w-5xl space-y-6 animate-fade-in">
+            {/* Promo KPI Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-800/50 shadow-sm flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider font-extrabold block">Qualified Orders</span>
+                  <span className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">{qualifiedOrders.length}</span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                  <Gift size={18} />
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-800/50 shadow-sm flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider font-extrabold block">Qualified Volume</span>
+                  <span className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                    ₦{qualifiedOrders.reduce((sum, o) => sum + o.totalAmount, 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                  <DollarSign size={18} />
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-800/50 shadow-sm flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-[10px] text-neutral-400 dark:text-neutral-500 uppercase tracking-wider font-extrabold block">Conversion Rate</span>
+                  <span className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
+                    {orders.length > 0 ? ((qualifiedOrders.length / orders.length) * 100).toFixed(1) : '0.0'}%
+                  </span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                  <Users size={18} />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Column - Promo Configuration Form */}
+              <div className="lg:col-span-5 space-y-6">
+                <form onSubmit={handleSavePromo} className="p-6 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-800/50 shadow-sm space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-neutral-950 dark:text-white">Promo Configurations</h3>
+                      <p className="text-[11px] text-neutral-500 mt-0.5">Define promo constraints & rewards.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsPromoEnabled(!settingsPromoEnabled)}
+                      className="text-amber-500 focus:outline-none cursor-pointer"
+                      id="promo-tab-toggle"
+                    >
+                      {settingsPromoEnabled ? <ToggleRight size={36} /> : <ToggleLeft size={36} className="text-neutral-400" />}
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label htmlFor="promo-amount-input" className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                        Minimum Order Amount (₦)
+                      </label>
+                      <input
+                        id="promo-amount-input"
+                        type="number"
+                        required
+                        disabled={!settingsPromoEnabled}
+                        value={settingsPromoMinAmount}
+                        onChange={(e) => setSettingsPromoMinAmount(Number(e.target.value) || 0)}
+                        placeholder="e.g. 15000"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono disabled:opacity-50"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label htmlFor="promo-reward-input" className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                        Promo Reward / Free Gift Name
+                      </label>
+                      <input
+                        id="promo-reward-input"
+                        type="text"
+                        required
+                        disabled={!settingsPromoEnabled}
+                        value={settingsPromoRewardName}
+                        onChange={(e) => setSettingsPromoRewardName(e.target.value)}
+                        placeholder="e.g. Free bottle of legendary Hibiscus Zobo"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+
+                  {promoSavedMessage && (
+                    <div className="flex items-center gap-2 p-3 text-xs rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-semibold animate-fade-in">
+                      <CheckCircle2 size={14} className="shrink-0" />
+                      <span>Promo configurations updated!</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="w-full px-5 py-2.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white cursor-pointer shadow-md shadow-amber-500/10 transition-colors"
+                  >
+                    Save Promo Settings
+                  </button>
+                </form>
+
+                <div className="p-5 rounded-2xl bg-neutral-50 dark:bg-neutral-950/20 border border-neutral-200/50 dark:border-neutral-800/50 space-y-3">
+                  <h4 className="text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-amber-500" />
+                    <span>How it works on checkout</span>
+                  </h4>
+                  <ul className="text-[11px] text-neutral-600 dark:text-neutral-400 space-y-2 list-disc list-inside leading-relaxed">
+                    <li>Dynamic cart progress bar calculates live deficit (₦ left to free gift).</li>
+                    <li>Congratulates customer inside cart with sound cue when milestone is reached.</li>
+                    <li>Appends the gift description automatically into the final orders database ledger.</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Right Column - Qualified Orders List */}
+              <div className="lg:col-span-7 p-6 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-800/50 shadow-sm flex flex-col min-h-[400px]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-neutral-100 dark:border-neutral-800/60">
+                  <div>
+                    <h3 className="text-sm font-bold text-neutral-950 dark:text-white">Qualified Pre-Orders Tracker</h3>
+                    <p className="text-[11px] text-neutral-500 mt-0.5">Real-time ledger of orders qualifying for ₦{settingsPromoMinAmount.toLocaleString()}+.</p>
+                  </div>
+                  <span className="text-[10px] bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 px-2.5 py-1 rounded-full font-extrabold shrink-0 self-start sm:self-auto">
+                    {qualifiedOrders.length} Qualified
+                  </span>
+                </div>
+
+                <div className="flex-1 mt-4 overflow-y-auto max-h-[480px] space-y-3 pr-1">
+                  {qualifiedOrders.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center text-center h-full py-12 text-neutral-400">
+                      <Gift size={32} className="text-neutral-300 dark:text-neutral-700 animate-bounce mb-3" />
+                      <p className="text-xs italic font-medium">No orders qualify for the current ₦{settingsPromoMinAmount.toLocaleString()}+ promo.</p>
+                    </div>
+                  ) : (
+                    qualifiedOrders.map((order) => (
+                      <div
+                        key={order.id}
+                        className="p-3.5 rounded-xl border border-neutral-200/60 dark:border-neutral-800/60 bg-neutral-50/40 dark:bg-neutral-950/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm hover:border-amber-500/30 transition-all"
+                      >
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-neutral-900 dark:text-neutral-100 text-xs truncate">
+                              {order.customerName}
+                            </span>
+                            <span className="text-[9px] font-mono text-neutral-400 font-normal shrink-0">
+                              (#{order.id.slice(-6)})
+                            </span>
+                          </div>
+
+                          <div className="text-[10px] text-neutral-500 dark:text-neutral-400 flex flex-wrap gap-x-3 gap-y-1">
+                            <span className="flex items-center gap-1">
+                              <Phone size={11} className="text-neutral-400 shrink-0" />
+                              {order.customerPhone}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Mail size={11} className="text-neutral-400 shrink-0" />
+                              {order.customerEmail}
+                            </span>
+                          </div>
+
+                          <div className="text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                            Unlocks: {settingsPromoRewardName}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 border-t sm:border-t-0 pt-2.5 sm:pt-0 border-neutral-150 dark:border-neutral-800">
+                          <div className="text-left sm:text-right shrink-0">
+                            <div className="font-mono font-bold text-neutral-900 dark:text-neutral-50 text-xs">
+                              ₦{order.totalAmount.toLocaleString()}
+                            </div>
+                            <div className="text-[9px] text-neutral-400 font-semibold uppercase tracking-wider">
+                              {new Date(order.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const text = `Hello ${order.customerName}! 🎉 Olart Kitchen here! Your pre-order of ₦${order.totalAmount.toLocaleString()} has qualified for our Pre-Order Milestone Promo. You have unlocked a *${settingsPromoRewardName}* with your meal! Thank you for ordering! 🍳`;
+                                navigator.clipboard.writeText(text);
+                                setPromoCopiedId(order.id);
+                                setTimeout(() => setPromoCopiedId(null), 2000);
+                              }}
+                              className={`px-2 py-1 rounded-lg text-[9px] font-bold transition-all flex items-center gap-1 cursor-pointer border ${
+                                promoCopiedId === order.id
+                                  ? 'bg-emerald-500 border-emerald-500 text-white'
+                                  : 'bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:border-amber-500'
+                              }`}
+                            >
+                              {promoCopiedId === order.id ? 'Copied' : 'Copy Text'}
+                            </button>
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase shrink-0 ${
+                              order.status === 'confirmed' || order.status === 'paid'
+                                ? 'bg-emerald-500/10 text-emerald-600'
+                                : order.status === 'preparing'
+                                ? 'bg-blue-500/10 text-blue-600'
+                                : 'bg-amber-500/10 text-amber-600'
+                            }`}>
+                              {order.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -2237,7 +2586,11 @@ export default function AdminPanel({
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 hover:bg-amber-500 hover:text-white text-amber-600 dark:text-amber-400 dark:hover:bg-amber-500 dark:hover:text-white transition-all disabled:opacity-50 cursor-pointer shadow-sm border border-amber-500/10"
                     title="Generate culinary description using Gemini"
                   >
-                    <Sparkles size={11} className={isGeneratingDesc ? "animate-spin" : ""} />
+                    {isGeneratingDesc ? (
+                      <Loader2 size={11} className="animate-spin" />
+                    ) : (
+                      <Sparkles size={11} />
+                    )}
                     <span>{isGeneratingDesc ? "AI Writing..." : "AI Describe"}</span>
                   </button>
                 </div>
@@ -2338,7 +2691,7 @@ export default function AdminPanel({
                   <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex items-center justify-center shrink-0 shadow-inner group">
                     {isGeneratingImg && (
                       <div className="absolute inset-0 bg-neutral-950/70 z-10 flex flex-col items-center justify-center text-white text-center p-1">
-                        <Sparkles size={16} className="animate-spin text-amber-400 mb-1" />
+                        <Loader2 size={16} className="animate-spin text-amber-400 mb-1" />
                         <span className="text-[8px] font-bold leading-none">AI Generating...</span>
                       </div>
                     )}
@@ -2433,7 +2786,11 @@ export default function AdminPanel({
                         disabled={isGeneratingImg}
                         className="flex items-center justify-center gap-2 px-3 py-2 border border-amber-500/30 hover:border-amber-500 rounded-xl bg-amber-500/5 hover:bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-semibold cursor-pointer transition-all disabled:opacity-50"
                       >
-                        <Sparkles size={14} className={isGeneratingImg ? "animate-spin text-amber-500" : "text-amber-500"} />
+                        {isGeneratingImg ? (
+                          <Loader2 size={14} className="animate-spin text-amber-500" />
+                        ) : (
+                          <Sparkles size={14} className="text-amber-500" />
+                        )}
                         <span>{isGeneratingImg ? "Generating Premium Image..." : "Generate AI Culinary Image"}</span>
                       </button>
                     </div>

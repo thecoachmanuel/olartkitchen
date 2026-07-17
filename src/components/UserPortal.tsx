@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, User, Mail, Phone, Lock, ClipboardCheck, CreditCard, Clock, 
   CheckCircle2, AlertCircle, ShoppingBag, LogOut, ArrowRight, MessageSquare,
-  Utensils, Eye, EyeOff, MapPin, Truck, ShieldCheck, Check, Activity, Map, Copy, Compass, FileText
+  Utensils, Eye, EyeOff, MapPin, Truck, ShieldCheck, Check, Activity, Map, Copy, Compass, FileText, Loader2
 } from 'lucide-react';
 import { Order, User as UserType, AdminSettings } from '../types';
 
@@ -620,7 +620,7 @@ export default function UserPortal({
                                     <div className="p-3 bg-neutral-50 dark:bg-neutral-950/60 rounded-xl border border-neutral-200/50 dark:border-neutral-800/40 text-[11px] text-neutral-600 dark:text-neutral-400 leading-relaxed flex items-center gap-2">
                                       {isPending && (
                                         <>
-                                          <Clock size={13} className="text-amber-500 shrink-0 animate-spin" />
+                                          <Loader2 size={13} className="text-amber-500 shrink-0 animate-spin" />
                                           <span>Order placed! We are currently awaiting your bank transfer confirmation. Once verified, we will move your order to "Payment Verified".</span>
                                         </>
                                       )}

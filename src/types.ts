@@ -63,6 +63,8 @@ export interface AdminSettings {
   contactDescription?: string;
   promoMinAmount?: number;
   promoRewardName?: string;
+  promoEnabled?: boolean;
+  addons?: { id: string; name: string; price: number }[];
 }
 
 export interface User {

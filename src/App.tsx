@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   ShoppingBag, Search, Sparkles, Sun, Moon, SlidersHorizontal, 
   Trash2, X, AlertCircle, RefreshCw, KeyRound, ArrowRight, Utensils, Heart, Check, Info, User as UserIcon, Phone,
-  Plus, Truck, Bell, Volume2, VolumeX, ShieldCheck, Settings as Settings2, Clock, Compass
+  Plus, Truck, Bell, Volume2, VolumeX, ShieldCheck, Settings as Settings2, Clock, Compass, Loader2
 } from 'lucide-react';
 import { FoodItem, CartItem, Order, AdminSettings, User, AppNotification } from './types';
 import { INITIAL_FOOD_ITEMS, DEFAULT_ADMIN_SETTINGS, FOOD_CATEGORIES, SEED_ORDERS } from './data';
@@ -39,7 +39,16 @@ export default function App() {
   });
 
   // Navigation View ('storefront' | 'admin' | 'contact')
-  const [activeView, setActiveView] = useState<'storefront' | 'admin' | 'contact'>('storefront');
+  const [activeView, setActiveView] = useState<'storefront' | 'admin' | 'contact'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const view = params.get('view');
+      if (view === 'admin' || view === 'contact' || view === 'storefront') {
+        return view as 'storefront' | 'admin' | 'contact';
+      }
+    }
+    return 'storefront';
+  });
 
   // Core Persistent States
   const [foodItems, setFoodItems] = useState<FoodItem[]>(() => {
@@ -249,7 +258,13 @@ export default function App() {
     return null;
   });
 
-  const [isUserPortalOpen, setIsUserPortalOpen] = useState(false);
+  const [isUserPortalOpen, setIsUserPortalOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('portal') === 'true';
+    }
+    return false;
+  });
 
   // Database status tracking
   const [dbStatus, setDbStatus] = useState<{ isConnected: boolean; mode: string; databaseName: string | null; error: string | null } | null>(null);
@@ -298,6 +313,52 @@ export default function App() {
         if (Array.isArray(users)) setUsersList(users);
       })
       .catch((err) => console.error('Failed to fetch users:', err));
+  }, []);
+
+  // Sync state to URL and back button handling so reloading/refreshing loads the exact page
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const currentView = params.get('view');
+      const currentPortal = params.get('portal');
+
+      const nextView = activeView;
+      const nextPortal = isUserPortalOpen ? 'true' : 'false';
+
+      if (currentView !== nextView || currentPortal !== nextPortal) {
+        params.set('view', nextView);
+        if (isUserPortalOpen) {
+          params.set('portal', 'true');
+        } else {
+          params.delete('portal');
+        }
+
+        const newUrl = `${window.location.pathname}?${params.toString()}`;
+        window.history.replaceState({ ...window.history.state }, '', newUrl);
+      }
+    }
+  }, [activeView, isUserPortalOpen]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handlePopState = () => {
+        const params = new URLSearchParams(window.location.search);
+        const view = params.get('view');
+        const portal = params.get('portal') === 'true';
+
+        if (view === 'admin' || view === 'contact' || view === 'storefront') {
+          setActiveView(view as 'storefront' | 'admin' | 'contact');
+        } else {
+          setActiveView('storefront');
+        }
+        setIsUserPortalOpen(portal);
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
   }, []);
 
   // Preload food images and logo image for instant, delay-free rendering
@@ -819,9 +880,14 @@ export default function App() {
   };
 
   const handleUpdateSettings = (updatedSettings: AdminSettings) => {
+    const isPromoNowEnabled = updatedSettings.promoEnabled !== false;
+    const wasPromoEnabled = adminSettings.promoEnabled !== false;
     const hasPromoChanged = 
-      updatedSettings.promoMinAmount !== adminSettings.promoMinAmount ||
-      updatedSettings.promoRewardName !== adminSettings.promoRewardName;
+      isPromoNowEnabled && (
+        !wasPromoEnabled ||
+        updatedSettings.promoMinAmount !== adminSettings.promoMinAmount ||
+        updatedSettings.promoRewardName !== adminSettings.promoRewardName
+      );
 
     setAdminSettings(updatedSettings);
     
@@ -838,6 +904,12 @@ export default function App() {
           '🎁 New Milestone Promo Set!',
           `Spend ₦${(updatedSettings.promoMinAmount ?? 15000).toLocaleString()}+ on your pre-order to unlock: ${updatedSettings.promoRewardName ?? 'Free Signature Hibiscus Zobo'}!`,
           'deal'
+        );
+      } else if (wasPromoEnabled && !isPromoNowEnabled) {
+        addAppNotification(
+          '🎁 Milestone Promo Paused',
+          'The milestone promo has been temporarily deactivated by the chef.',
+          'system'
         );
       }
     })
@@ -980,7 +1052,7 @@ export default function App() {
             transition={{ type: "spring", stiffness: 350, damping: 25 }}
             className="fixed top-5 left-1/2 z-[100] flex items-center gap-2 px-5 py-3 rounded-full bg-neutral-900/90 text-white dark:bg-white dark:text-neutral-950 shadow-2xl border border-white/10 dark:border-neutral-200 text-xs font-semibold backdrop-blur-md"
           >
-            <Sparkles size={14} className="text-amber-400 animate-spin" />
+            <Loader2 size={14} className="text-amber-400 animate-spin" />
             <span>{notification}</span>
           </motion.div>
         )}
@@ -1362,11 +1434,11 @@ export default function App() {
 
               {/* Cart Body list */}
               <div className="flex-1 p-5 overflow-y-auto space-y-4">
-                {cart.length > 0 && (
+                {cart.length > 0 && adminSettings.promoEnabled !== false && (
                   <div className="p-4 bg-amber-500/5 dark:bg-amber-500/5 border border-amber-500/10 rounded-2xl space-y-2">
                     <div className="flex justify-between text-[11px] font-bold">
                       <span className="text-neutral-600 dark:text-neutral-400 flex items-center gap-1">
-                        <Sparkles size={11} className="text-amber-500 animate-spin" />
+                        <Loader2 size={11} className="text-amber-500 animate-spin" />
                         <span>Pre-Order Milestones</span>
                       </span>
                       <span className="text-amber-600 dark:text-amber-400">
@@ -1450,39 +1522,37 @@ export default function App() {
                             <span className="text-[9px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block mb-1.5">
                               Premium Sides / Addons:
                             </span>
-                            <div className="flex flex-wrap gap-1.5">
-                              {[
-                                { id: 'plantain', name: 'Fried Plantain (Dodo)', price: 1500 },
-                                { id: 'egg', name: 'Boiled Egg', price: 1000 },
-                                { id: 'assorted', name: 'Assorted Meat', price: 2500 },
-                                { id: 'chicken', name: 'Grilled Chicken', price: 3500 },
-                              ].map((addon) => {
-                                const isSelected = item.addons?.some(a => a.id === addon.id) || false;
-                                return (
-                                  <button
-                                    type="button"
-                                    key={addon.id}
-                                    onClick={() => {
-                                      const currentAddons = item.addons || [];
-                                      const nextAddons = isSelected
-                                        ? currentAddons.filter(a => a.id !== addon.id)
-                                        : [...currentAddons, addon];
-                                      setCart(prev => prev.map(c => 
-                                        c.foodItem.id === item.foodItem.id ? { ...c, addons: nextAddons } : c
-                                      ));
-                                    }}
-                                    className={`text-[9px] px-2 py-1 rounded-lg font-extrabold border transition-all flex items-center gap-1 cursor-pointer ${
-                                      isSelected
-                                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
-                                        : 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
-                                    }`}
-                                  >
-                                    {isSelected ? <Check size={8} className="text-amber-500" /> : <Plus size={8} />}
-                                    <span>{addon.name} (+₦{addon.price.toLocaleString()})</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
+                             <div className="flex flex-wrap gap-1.5">
+                               {(adminSettings.addons || []).map((addon) => {
+                                 const isSelected = item.addons?.some(a => a.id === addon.id) || false;
+                                 return (
+                                   <button
+                                     type="button"
+                                     key={addon.id}
+                                     onClick={() => {
+                                       const currentAddons = item.addons || [];
+                                       const nextAddons = isSelected
+                                         ? currentAddons.filter(a => a.id !== addon.id)
+                                         : [...currentAddons, addon];
+                                       setCart(prev => prev.map(c => 
+                                         c.foodItem.id === item.foodItem.id ? { ...c, addons: nextAddons } : c
+                                       ));
+                                     }}
+                                     className={`text-[9px] px-2 py-1 rounded-lg font-extrabold border transition-all flex items-center gap-1 cursor-pointer ${
+                                       isSelected
+                                         ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
+                                         : 'bg-neutral-50 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
+                                     }`}
+                                   >
+                                     {isSelected ? <Check size={8} className="text-amber-500" /> : <Plus size={8} />}
+                                     <span>{addon.name} (+₦{addon.price.toLocaleString()})</span>
+                                   </button>
+                                 );
+                               })}
+                               {(adminSettings.addons || []).length === 0 && (
+                                 <span className="text-[10px] text-neutral-400 italic">No premium sides or addons available.</span>
+                               )}
+                             </div>
                           </div>
 
                           {/* Quick Preset Actions & Custom notes input */}
