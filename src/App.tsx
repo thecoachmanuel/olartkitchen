@@ -731,7 +731,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0, x: "-50%" }}
             exit={{ opacity: 0, y: -30, x: "-50%" }}
             transition={{ type: "spring", stiffness: 350, damping: 25 }}
-            className="fixed top-5 left-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-full bg-neutral-900/90 text-white dark:bg-white dark:text-neutral-950 shadow-2xl border border-white/10 dark:border-neutral-200 text-xs font-semibold backdrop-blur-md"
+            className="fixed top-5 left-1/2 z-[100] flex items-center gap-2 px-5 py-3 rounded-full bg-neutral-900/90 text-white dark:bg-white dark:text-neutral-950 shadow-2xl border border-white/10 dark:border-neutral-200 text-xs font-semibold backdrop-blur-md"
           >
             <Sparkles size={14} className="text-amber-400 animate-spin" />
             <span>{notification}</span>
@@ -740,7 +740,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Main Premium Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 w-full bg-white/80 dark:bg-neutral-950/80 border-b border-neutral-200/50 dark:border-neutral-900/50 backdrop-blur-md">
+      <header className="fixed top-0 left-0 right-0 z-40 w-full bg-white/80 dark:bg-neutral-950/80 border-b border-neutral-200/50 dark:border-neutral-900/50 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           
           {/* Brand Identity */}
@@ -1063,7 +1063,7 @@ export default function App() {
       {/* PRE-ORDER CART SLIDE-OVER SIDEBAR */}
       <AnimatePresence>
         {isCartOpen && (
-          <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
+          <div className="fixed inset-0 z-[100] overflow-hidden flex justify-end">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}

@@ -630,7 +630,7 @@ export default function AdminPanel({
       {/* MOBILE MENU DRAWER OVERLAY */}
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden" id="mobile-sidebar-drawer">
+          <div className="fixed inset-0 z-[100] lg:hidden" id="mobile-sidebar-drawer">
             {/* Scrim overlay */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -1994,7 +1994,7 @@ export default function AdminPanel({
 
       {/* CRUD Food Item Modal */}
       {showItemModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/60 backdrop-blur-md">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-neutral-950/60 backdrop-blur-md">
           <div className="w-full max-w-xl max-h-[90vh] rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-2xl overflow-hidden flex flex-col">
             <div className="flex justify-between items-center p-5 border-b border-neutral-100 dark:border-neutral-800 shrink-0">
               <h3 className="font-sans font-bold text-base text-neutral-900 dark:text-neutral-50">
