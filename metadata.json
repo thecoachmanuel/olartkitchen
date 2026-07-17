@@ -1,0 +1,6 @@
+{
+  "name": "Olart Kitchen",
+  "description": "Ultra-premium pre-order food platform with live countdown timers, fluid multi-step checkout, and a powerful admin CRUD dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+@variant dark (&:where(.dark, .dark *));
+
+/* Custom premium design additions */
+@layer utilities {
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(229, 231, 235, 0.5);
+  }
+
+  .dark .glass-panel {
+    background: rgba(15, 15, 15, 0.45);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(63, 63, 70, 0.3);
+  }
+
+  .ambient-glow-amber {
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0) 70%);
+  }
+
+  .ambient-glow-emerald {
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0) 70%);
+  }
+}
+
+/* Base resets & scrollbars */
+html, body {
+  font-family: var(--font-sans);
+  scroll-behavior: smooth;
+}
+
+/* High contrast selection styling */
+::selection {
+  background-color: rgba(245, 158, 11, 0.25);
+  color: #d97706;
+}
+
+/* Clean, modern scrollbars for deep glass frames */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.5);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(63, 63, 70, 0.5);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(63, 63, 70, 0.8);
+}
+
+/* Global input & textarea placeholder styles - Very Light Gray */
+input::placeholder,
+textarea::placeholder {
+  color: rgba(163, 163, 163, 0.5) !important; /* very light neutral-400 gray with low opacity */
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgba(115, 115, 115, 0.5) !important; /* very light neutral-500 gray for dark mode */
+}
+
