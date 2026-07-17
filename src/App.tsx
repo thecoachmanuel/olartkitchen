@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ShoppingBag, Search, Sparkles, Sun, Moon, SlidersHorizontal, 
   Trash2, X, AlertCircle, RefreshCw, KeyRound, ArrowRight, Utensils, Heart, Check, Info, User as UserIcon, Phone,
-  Plus, Truck
+  Plus, Truck, Bell, Volume2, VolumeX, ShieldCheck, Settings as Settings2, Clock, Compass
 } from 'lucide-react';
-import { FoodItem, CartItem, Order, AdminSettings, User } from './types';
+import { FoodItem, CartItem, Order, AdminSettings, User, AppNotification } from './types';
 import { INITIAL_FOOD_ITEMS, DEFAULT_ADMIN_SETTINGS, FOOD_CATEGORIES, SEED_ORDERS } from './data';
 import FoodCard from './components/FoodCard';
 import CheckoutModal from './components/CheckoutModal';
@@ -106,6 +106,114 @@ export default function App() {
 
   // Notification Banner
   const [notification, setNotification] = useState<string | null>(null);
+
+  // Push Notifications & Reminders System
+  const [appNotifications, setAppNotifications] = useState<AppNotification[]>(() => {
+    const stored = localStorage.getItem('olart-app-notifications');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [
+      {
+        id: 'notif-1',
+        title: '🇳🇬 Welcome to Olart Kitchen!',
+        message: 'Pre-order registers are active. Order your premium stews, soups and platters in advance!',
+        timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
+        isRead: false,
+        type: 'system'
+      },
+      {
+        id: 'notif-2',
+        title: '🎁 Milestone Promo: Free Drink',
+        message: 'Add ₦15,000+ to your pre-order cart to receive a free bottle of our legendary Hibiscus Zobo!',
+        timestamp: new Date(Date.now() - 3600000 * 5).toISOString(),
+        isRead: false,
+        type: 'deal'
+      },
+      {
+        id: 'notif-3',
+        title: '🚚 Dispatch Logistics Active',
+        message: 'Our dispatch riders cover Lekki, Ikoyi, Victoria Island, Ikeja and surrounding areas.',
+        timestamp: new Date(Date.now() - 3600000 * 12).toISOString(),
+        isRead: true,
+        type: 'system'
+      }
+    ];
+  });
+
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
+  const [notificationTab, setNotificationTab] = useState<'alerts' | 'settings'>('alerts');
+
+  const handleMarkAllNotificationsAsRead = () => {
+    setAppNotifications((prev) => {
+      const next = prev.map((n) => ({ ...n, isRead: true }));
+      localStorage.setItem('olart-app-notifications', JSON.stringify(next));
+      return next;
+    });
+    triggerToast('All alerts marked as read.');
+  };
+
+  const handleClearNotifications = () => {
+    setAppNotifications([]);
+    localStorage.setItem('olart-app-notifications', JSON.stringify([]));
+    triggerToast('Alert history cleared.');
+  };
+
+  const handleToggleNotificationRead = (id: string) => {
+    setAppNotifications((prev) => {
+      const next = prev.map((n) => (n.id === id ? { ...n, isRead: !n.isRead } : n));
+      localStorage.setItem('olart-app-notifications', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const handleToggleDesktopPush = () => {
+    if (!desktopPushEnabled) {
+      if (!window.Notification) {
+        triggerToast('Desktop push notifications are not supported in this browser.');
+        return;
+      }
+      Notification.requestPermission().then((permission) => {
+        if (permission === 'granted') {
+          setDesktopPushEnabled(true);
+          setTimeout(() => {
+            addAppNotification(
+              '🔔 Notifications Activated',
+              'You will receive push updates here and on your device as pre-order workflows advance.',
+              'system'
+            );
+          }, 100);
+        } else {
+          triggerToast('Permission to display push notifications was denied.');
+          setDesktopPushEnabled(false);
+        }
+      });
+    } else {
+      setDesktopPushEnabled(false);
+      triggerToast('Desktop push notifications disabled.');
+    }
+  };
+
+  const [soundEffectsEnabled, setSoundEffectsEnabled] = useState(() => {
+    const stored = localStorage.getItem('olart-sound-enabled');
+    return stored ? stored === 'true' : true;
+  });
+  const [desktopPushEnabled, setDesktopPushEnabled] = useState(() => {
+    const stored = localStorage.getItem('olart-desktop-push-enabled');
+    return stored === 'true';
+  });
+  const [simulationSpeed, setSimulationSpeed] = useState<'normal' | 'fast' | 'off'>(() => {
+    const stored = localStorage.getItem('olart-sim-speed');
+    return (stored as any) || 'fast';
+  });
+  const [idleCartReminderEnabled, setIdleCartReminderEnabled] = useState(() => {
+    const stored = localStorage.getItem('olart-idle-cart-reminder');
+    return stored ? stored === 'true' : true;
+  });
 
   // User Authentication & Order Tracking states
   const [usersList, setUsersList] = useState<User[]>(() => {
@@ -255,7 +363,187 @@ export default function App() {
     }
   }, [currentUser]);
 
-  // Utility to show temporary toast
+  // Persistent Settings for Push Notifications
+  useEffect(() => {
+    localStorage.setItem('olart-sound-enabled', String(soundEffectsEnabled));
+  }, [soundEffectsEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('olart-desktop-push-enabled', String(desktopPushEnabled));
+  }, [desktopPushEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem('olart-sim-speed', simulationSpeed);
+  }, [simulationSpeed]);
+
+  useEffect(() => {
+    localStorage.setItem('olart-idle-cart-reminder', String(idleCartReminderEnabled));
+  }, [idleCartReminderEnabled]);
+
+  // Active Order State Progression Simulation Loop
+  useEffect(() => {
+    if (simulationSpeed === 'off') return;
+
+    const intervalMs = simulationSpeed === 'fast' ? 14000 : 35000;
+
+    const timer = setInterval(() => {
+      setOrders((prevOrders) => {
+        // Find an active order that can transition
+        const orderToAdvanceIndex = prevOrders.findIndex(
+          (o) => o.status !== 'confirmed' && o.status !== 'cancelled'
+        );
+
+        if (orderToAdvanceIndex === -1) return prevOrders;
+
+        const updatedOrders = [...prevOrders];
+        const order = updatedOrders[orderToAdvanceIndex];
+        let nextStatus: Order['status'] = order.status;
+        let title = '';
+        let desc = '';
+
+        if (order.status === 'pending') {
+          nextStatus = 'paid';
+          title = '💳 Bank Transfer Verified!';
+          desc = `Portions for Order ${order.id} are now secured. Payment has been verified automatically!`;
+        } else if (order.status === 'paid') {
+          nextStatus = 'preparing';
+          title = '🍳 Entered the Kitchen!';
+          desc = `Chef Olaiya is preparing your delicious traditional recipes for Order ${order.id}.`;
+        } else if (order.status === 'preparing') {
+          nextStatus = 'confirmed';
+          title = '📦 Dispatched & Ready!';
+          desc = `Order ${order.id} is securely packaged and dispatched with our fast-track delivery rider!`;
+        }
+
+        if (nextStatus !== order.status) {
+          updatedOrders[orderToAdvanceIndex] = {
+            ...order,
+            status: nextStatus,
+          };
+
+          // Update local state storage
+          localStorage.setItem('olart-orders', JSON.stringify(updatedOrders));
+
+          // Sync with server database (soft sync)
+          fetch(`/api/orders/${order.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: nextStatus }),
+          }).catch((err) => console.error('Simulated API sync failed:', err));
+
+          // Trigger push notification inside timeout to prevent updating state during render
+          setTimeout(() => {
+            addAppNotification(title, desc, 'order_status', order.id);
+          }, 40);
+        }
+
+        return updatedOrders;
+      });
+    }, intervalMs);
+
+    return () => clearInterval(timer);
+  }, [simulationSpeed, soundEffectsEnabled, desktopPushEnabled]);
+
+  // Cart Inactivity Tracking & Reminders Loop
+  const lastCartActivityRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    lastCartActivityRef.current = Date.now();
+  }, [cart, isCartOpen]);
+
+  useEffect(() => {
+    if (!idleCartReminderEnabled || cart.length === 0) return;
+
+    const interval = setInterval(() => {
+      const idleDuration = Date.now() - lastCartActivityRef.current;
+      // Remind if idle for more than 40 seconds
+      if (idleDuration >= 40000) {
+        lastCartActivityRef.current = Date.now(); // Reset activity anchor
+
+        addAppNotification(
+          '⚠️ Portions expire soon!',
+          'You have unreserved items resting in your pre-order cart. Finalize your checkout now before slot capacities close!',
+          'reminder'
+        );
+      }
+    }, 12000);
+
+    return () => clearInterval(interval);
+  }, [cart, idleCartReminderEnabled, soundEffectsEnabled, desktopPushEnabled]);
+
+  // Synthetic sound chime using Web Audio API (cross-browser compatible & layout-safe)
+  const playChime = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(523.25, ctx.currentTime); // C5 (ding)
+      gain1.gain.setValueAtTime(0, ctx.currentTime);
+      gain1.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.04);
+      gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+      
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 0.22);
+
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08); // E5 (dong)
+      gain2.gain.setValueAtTime(0, ctx.currentTime + 0.08);
+      gain2.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.12);
+      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.38);
+      
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(ctx.currentTime + 0.08);
+      osc2.stop(ctx.currentTime + 0.38);
+    } catch (e) {
+      console.warn('Synthetic notification chime played but was blocked by browser autoplay rules:', e);
+    }
+  };
+
+  // Central trigger to add a persistent AppNotification, sync to localStorage & show Toast/Push
+  const addAppNotification = (title: string, message: string, type: AppNotification['type'], orderId?: string) => {
+    const newNotif: AppNotification = {
+      id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      title,
+      message,
+      timestamp: new Date().toISOString(),
+      isRead: false,
+      type,
+      orderId,
+    };
+
+    setAppNotifications((prev) => {
+      const next = [newNotif, ...prev];
+      localStorage.setItem('olart-app-notifications', JSON.stringify(next));
+      return next;
+    });
+
+    if (soundEffectsEnabled) {
+      playChime();
+    }
+
+    if (desktopPushEnabled && window.Notification && Notification.permission === 'granted') {
+      try {
+        new Notification(title, { body: message, icon: '/logo_emoji_or_asset' });
+      } catch (e) {
+        console.warn('Native push notification execution failed:', e);
+      }
+    }
+
+    // Displays the visual toast popup banner in the bottom center
+    setNotification(`${title.toUpperCase()}: ${message}`);
+    setTimeout(() => setNotification(null), 4500);
+  };
+
+  // Legacy utility toast proxy (backward compatibility)
   const triggerToast = (message: string) => {
     setNotification(message);
     setTimeout(() => setNotification(null), 3500);
@@ -382,6 +670,14 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newOrder)
     }).catch((err) => console.error('Failed to post order to server:', err));
+
+    // Trigger instant pre-order success notification
+    addAppNotification(
+      '🎉 Pre-order Submitted!',
+      `Thank you ${newOrder.customerName}, your portion reservation ${newOrder.id} (${formatNaira(newOrder.totalAmount)}) has been successfully received.`,
+      'order_status',
+      newOrder.id
+    );
 
     // 3. Clean cart
     setCart([]);
@@ -708,6 +1004,7 @@ export default function App() {
   });
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const unreadNotificationCount = appNotifications.filter((n) => !n.isRead).length;
   const cartTotal = cart.reduce((sum, item) => {
     const addonsSum = item.addons?.reduce((s, a) => s + a.price, 0) || 0;
     return sum + (item.foodItem.price + addonsSum) * item.quantity;
@@ -785,6 +1082,21 @@ export default function App() {
               id="theme-switcher-btn"
             >
               {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+
+            {/* Notification Bell Button */}
+            <button
+              onClick={() => setIsNotificationCenterOpen(true)}
+              className="relative p-2.5 rounded-xl border border-neutral-200/50 dark:border-neutral-800/50 bg-white/50 dark:bg-neutral-900/40 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 transition-all cursor-pointer group"
+              aria-label="Notification Center"
+              id="notification-center-btn"
+            >
+              <Bell size={15} className={`group-hover:rotate-12 transition-transform duration-200 ${unreadNotificationCount > 0 ? "text-amber-500 animate-swing" : ""}`} />
+              {unreadNotificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[8px] font-extrabold font-mono text-white border border-white dark:border-neutral-950 animate-bounce">
+                  {unreadNotificationCount}
+                </span>
+              )}
             </button>
 
             {/* Contact Us Button */}
@@ -1359,6 +1671,372 @@ export default function App() {
             formatNaira={formatNaira}
             adminSettings={adminSettings}
           />
+        )}
+      </AnimatePresence>
+
+      {/* PUSH NOTIFICATIONS & REMINDERS SIDEBAR DRAWER */}
+      <AnimatePresence>
+        {isNotificationCenterOpen && (
+          <div className="fixed inset-0 z-[100] overflow-hidden flex justify-end">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsNotificationCenterOpen(false)}
+              className="absolute inset-0 bg-neutral-950/50 backdrop-blur-sm"
+              id="notification-backdrop"
+            />
+
+            {/* Slide drawer */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 260 }}
+              className="relative w-full max-w-md bg-white dark:bg-neutral-950 h-full shadow-2xl flex flex-col overflow-hidden border-l border-neutral-200 dark:border-neutral-900"
+              id="notification-center-drawer"
+            >
+              {/* Header */}
+              <div className="p-5 border-b border-neutral-200 dark:border-neutral-900 flex justify-between items-center bg-neutral-50 dark:bg-neutral-900/50">
+                <div>
+                  <div className="flex items-center gap-2 font-sans font-extrabold text-base text-neutral-950 dark:text-white">
+                    <Bell size={18} className="text-amber-500 animate-swing" />
+                    <span>Olart Notification Hub</span>
+                  </div>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                    {unreadNotificationCount} unread alert{unreadNotificationCount !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsNotificationCenterOpen(false)}
+                  className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 cursor-pointer transition-colors"
+                  id="close-notifications-btn"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Tabs Selection */}
+              <div className="flex border-b border-neutral-200 dark:border-neutral-900">
+                <button
+                  onClick={() => setNotificationTab('alerts')}
+                  className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer text-center ${
+                    notificationTab === 'alerts'
+                      ? 'border-amber-500 text-amber-600 dark:text-amber-400'
+                      : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
+                  }`}
+                  id="tab-alerts-btn"
+                >
+                  Alert Inbox
+                </button>
+                <button
+                  onClick={() => setNotificationTab('settings')}
+                  className={`flex-1 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer text-center ${
+                    notificationTab === 'settings'
+                      ? 'border-amber-500 text-amber-600 dark:text-amber-400'
+                      : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
+                  }`}
+                  id="tab-settings-btn"
+                >
+                  Preferences
+                </button>
+              </div>
+
+              {/* Drawer Content */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {notificationTab === 'alerts' ? (
+                  <>
+                    {/* Header quick actions */}
+                    {appNotifications.length > 0 && (
+                      <div className="flex justify-between items-center text-xs pb-1 border-b border-neutral-100 dark:border-neutral-900">
+                        <button
+                          onClick={handleMarkAllNotificationsAsRead}
+                          className="font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
+                        >
+                          Mark all as read
+                        </button>
+                        <button
+                          onClick={handleClearNotifications}
+                          className="text-neutral-400 hover:text-red-500 dark:hover:text-red-400 cursor-pointer"
+                        >
+                          Clear history
+                        </button>
+                      </div>
+                    )}
+
+                    {appNotifications.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center text-center py-16 px-4 space-y-3">
+                        <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-neutral-400 dark:text-neutral-500">
+                          <Bell size={20} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-neutral-800 dark:text-neutral-200 text-sm">Quiet for now</p>
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 max-w-xs">
+                            We will send real-time alerts as your pre-order verified state and kitchen progress updates!
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {appNotifications.map((notif) => {
+                          // Icon selector
+                          let IconEl = Bell;
+                          let iconClass = "bg-neutral-100 text-neutral-600 dark:bg-neutral-900 dark:text-neutral-400";
+                          if (notif.type === 'order_status') {
+                            IconEl = Compass;
+                            iconClass = "bg-amber-100 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400";
+                          } else if (notif.type === 'deal') {
+                            IconEl = Sparkles;
+                            iconClass = "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400";
+                          } else if (notif.type === 'reminder') {
+                            IconEl = AlertCircle;
+                            iconClass = "bg-rose-100 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400";
+                          } else if (notif.type === 'system') {
+                            IconEl = Utensils;
+                            iconClass = "bg-blue-100 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400";
+                          }
+
+                          // Time formatter helper
+                          const formatNotifTime = (iso: string) => {
+                            try {
+                              const diffMs = Date.now() - new Date(iso).getTime();
+                              if (diffMs < 60000) return 'Just now';
+                              const mins = Math.floor(diffMs / 60000);
+                              if (mins < 60) return `${mins}m ago`;
+                              const hours = Math.floor(mins / 60);
+                              if (hours < 24) return `${hours}h ago`;
+                              return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                            } catch (e) {
+                              return 'some time ago';
+                            }
+                          };
+
+                          return (
+                            <div
+                              key={notif.id}
+                              onClick={() => handleToggleNotificationRead(notif.id)}
+                              className={`p-4.5 rounded-xl border transition-all cursor-pointer ${
+                                notif.isRead
+                                  ? 'bg-white dark:bg-neutral-950 border-neutral-100 dark:border-neutral-900 opacity-70 hover:opacity-100'
+                                  : 'bg-amber-500/5 dark:bg-amber-500/5 border-amber-500/20 hover:bg-amber-500/10'
+                              }`}
+                            >
+                              <div className="flex gap-3">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${iconClass}`}>
+                                  <IconEl size={16} />
+                                </div>
+                                <div className="flex-1 min-w-0 space-y-1">
+                                  <div className="flex justify-between items-start gap-2">
+                                    <h4 className="font-bold text-xs sm:text-sm text-neutral-950 dark:text-white leading-tight">
+                                      {notif.title}
+                                    </h4>
+                                    <span className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium shrink-0">
+                                      {formatNotifTime(notif.timestamp)}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed break-words">
+                                    {notif.message}
+                                  </p>
+
+                                  {/* Order Action Button */}
+                                  {notif.orderId && (
+                                    <div className="pt-2">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setIsNotificationCenterOpen(false);
+                                          // Force user portal open to show details
+                                          setIsUserPortalOpen(true);
+                                        }}
+                                        className="inline-flex items-center gap-1 text-[11px] font-black text-amber-600 dark:text-amber-400 hover:underline"
+                                      >
+                                        <Compass size={11} />
+                                        <span>Live Tracking Portal</span>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                                {!notif.isRead && (
+                                  <div className="w-2 h-2 rounded-full bg-amber-500 shrink-0 self-center" />
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Native Push Request Card */}
+                    <div className="p-4.5 rounded-xl border border-neutral-200 dark:border-neutral-900 bg-neutral-50 dark:bg-neutral-900/30 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <h4 className="font-extrabold text-sm text-neutral-950 dark:text-white flex items-center gap-1.5">
+                            <ShieldCheck size={16} className="text-emerald-500" />
+                            Desktop Push Alerts
+                          </h4>
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                            Receive real-time notifications outside the browser tab.
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleToggleDesktopPush}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            desktopPushEnabled ? 'bg-amber-500' : 'bg-neutral-200 dark:bg-neutral-800'
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              desktopPushEnabled ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Native permission display */}
+                      <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-neutral-200/50 dark:border-neutral-900">
+                        <span className="text-neutral-500">Browser Status:</span>
+                        <span className={`font-mono font-bold uppercase ${
+                          typeof window !== 'undefined' && 'Notification' in window
+                            ? Notification.permission === 'granted'
+                              ? 'text-emerald-500'
+                              : Notification.permission === 'denied'
+                                ? 'text-red-500'
+                                : 'text-amber-500'
+                            : 'text-neutral-400'
+                        }`}>
+                          {typeof window !== 'undefined' && 'Notification' in window
+                            ? Notification.permission
+                            : 'unsupported'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Sound Effects Controls */}
+                    <div className="p-4.5 rounded-xl border border-neutral-200 dark:border-neutral-900 bg-neutral-50 dark:bg-neutral-900/30 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <h4 className="font-extrabold text-sm text-neutral-950 dark:text-white flex items-center gap-1.5">
+                            {soundEffectsEnabled ? <Volume2 size={16} className="text-amber-500 animate-pulse" /> : <VolumeX size={16} className="text-neutral-400" />}
+                            Audio Sound Chimes
+                          </h4>
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                            Play Nigerian double-note kitchen chimes on notification.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setSoundEffectsEnabled(!soundEffectsEnabled)}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            soundEffectsEnabled ? 'bg-amber-500' : 'bg-neutral-200 dark:bg-neutral-800'
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              soundEffectsEnabled ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Idle Cart Reminders */}
+                    <div className="p-4.5 rounded-xl border border-neutral-200 dark:border-neutral-900 bg-neutral-50 dark:bg-neutral-900/30 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <h4 className="font-extrabold text-sm text-neutral-950 dark:text-white flex items-center gap-1.5">
+                            <Clock size={16} className="text-blue-500" />
+                            Inactivity Reminders
+                          </h4>
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                            Alert me if my pre-order portions are pending in my cart.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setIdleCartReminderEnabled(!idleCartReminderEnabled)}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            idleCartReminderEnabled ? 'bg-amber-500' : 'bg-neutral-200 dark:bg-neutral-800'
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              idleCartReminderEnabled ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Simulation Settings */}
+                    <div className="p-4.5 rounded-xl border border-neutral-200 dark:border-neutral-900 bg-neutral-50 dark:bg-neutral-900/30 space-y-3">
+                      <div className="space-y-1">
+                        <h4 className="font-extrabold text-sm text-neutral-950 dark:text-white flex items-center gap-1.5">
+                          <Settings2 size={16} className="text-purple-500" />
+                          Order Flow Simulation
+                        </h4>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                          Automatically advance submitted orders through the kitchen workflow for demonstration.
+                        </p>
+                      </div>
+
+                      {/* Speed Buttons */}
+                      <div className="grid grid-cols-3 gap-2 pt-1.5">
+                        <button
+                          onClick={() => setSimulationSpeed('fast')}
+                          className={`py-2 px-3 rounded-lg text-xs font-black border transition-all cursor-pointer text-center ${
+                            simulationSpeed === 'fast'
+                              ? 'bg-amber-500 border-amber-500 text-white'
+                              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50'
+                          }`}
+                        >
+                          Fast (14s)
+                        </button>
+                        <button
+                          onClick={() => setSimulationSpeed('normal')}
+                          className={`py-2 px-3 rounded-lg text-xs font-black border transition-all cursor-pointer text-center ${
+                            simulationSpeed === 'normal'
+                              ? 'bg-amber-500 border-amber-500 text-white'
+                              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50'
+                          }`}
+                        >
+                          Normal (35s)
+                        </button>
+                        <button
+                          onClick={() => setSimulationSpeed('off')}
+                          className={`py-2 px-3 rounded-lg text-xs font-black border transition-all cursor-pointer text-center ${
+                            simulationSpeed === 'off'
+                              ? 'bg-amber-500 border-amber-500 text-white'
+                              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50'
+                          }`}
+                        >
+                          Turn Off
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Quick Demo Trigger Buttons */}
+                    <div className="pt-2 space-y-2">
+                      <button
+                        onClick={() => {
+                          addAppNotification(
+                            '🍳 Live From The Kitchen!',
+                            'Chef Olaiya has started roasting premium spices for your signature stews. Savor the aroma!',
+                            'system'
+                          );
+                        }}
+                        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 transition-all border border-amber-500/20 cursor-pointer"
+                        id="test-notification-btn"
+                      >
+                        <Sparkles size={14} />
+                        Trigger Live Kitchen Demo
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

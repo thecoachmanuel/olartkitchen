@@ -71,3 +71,14 @@ export interface User {
   password?: string;
 }
 
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: string;
+  isRead: boolean;
+  type: 'order_status' | 'system' | 'reminder' | 'deal';
+  orderId?: string;
+}
+
+
