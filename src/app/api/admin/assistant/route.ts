@@ -12,21 +12,22 @@ export async function POST(req: NextRequest) {
 You are a helpful, professional, and knowledgeable copilot assisting the admin with managing their kitchen.
 You have access to the current state of the platform:
 - Food Items Count: ${context?.foodItemsCount || 0}
-- Active Categories Count: ${context?.categoriesCount || 0}
+- Active Categories: ${context?.categories?.join(', ') || 'None'}
 - Total Orders: ${context?.ordersCount || 0}
 - Total Revenue: ₦${context?.totalRevenue?.toLocaleString() || 0}
+- Promo Enabled: ${context?.settings?.promoEnabled ? `Yes (Min ₦${context?.settings?.promoMinAmount})` : 'No'}
 
-Recent Orders Summary: 
-${context?.recentOrders?.map((o: any) => `- Order #${o.id.substring(0,6)}: ₦${o.total} (${o.status})`).join('\n') || 'None'}
+All Orders Ledger: 
+${context?.allOrders?.map((o: any) => `- Order #${o.id.substring(0,6)}: ₦${o.total} (${o.status}) | Items: ${o.items?.map((i:any) => `${i.quantity}x ${i.name}`).join(', ')} | Date: ${o.date}`).join('\n') || 'None'}
 
-Food Items Available:
-${context?.foodItems?.map((f: any) => `- ${f.name} (₦${f.price}) ${f.inStock ? '[In Stock]' : '[Out of Stock]'}`).join('\n') || 'None'}
+Food Items Inventory:
+${context?.foodItems?.map((f: any) => `- ${f.name} (₦${f.price}) [${f.category}] ${f.inStock ? 'In Stock' : 'Out of Stock'} - Current Pre-orders: ${f.currentPreOrders}`).join('\n') || 'None'}
 
 Provide concise, accurate, and helpful responses to the admin. If they ask about orders, revenue, or food items, use the context provided.
 Do not make up fake data if it is not in the context. Answer professionally but warmly.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.5-flash",
       contents: [
         { role: 'user', parts: [{ text: systemPrompt }] },
         { role: 'model', parts: [{ text: 'Understood. I am ready to assist.' }] },

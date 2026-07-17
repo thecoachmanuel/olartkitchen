@@ -50,10 +50,16 @@ export function AiAssistant({ foodItems, orders, settings, categories }: AiAssis
             context: {
               foodItemsCount: foodItems.length,
               ordersCount: orders.length,
-              totalRevenue: orders.reduce((sum, o) => sum + (o.total || 0), 0),
+              totalRevenue: orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
               categoriesCount: categories.length,
-              foodItems: foodItems.map(f => ({ name: f.name, price: f.price, inStock: f.inStock })),
-              recentOrders: orders.slice(0, 5).map(o => ({ id: o.id, total: o.total, status: o.status }))
+              foodItems: foodItems.map(f => ({ name: f.name, price: f.price, inStock: f.available, category: f.category, currentPreOrders: f.currentPreOrders })),
+              allOrders: orders.map(o => ({ id: o.id, total: o.totalAmount, status: o.status, date: o.createdAt, items: o.items.map((i: any) => ({ name: i.name, quantity: i.quantity })) })),
+              categories: categories.map(c => c.name),
+              settings: {
+                promoEnabled: settings?.promoEnabled,
+                promoMinAmount: settings?.promoMinAmount,
+                addons: settings?.addons
+              }
             }
           })
         });
@@ -92,10 +98,16 @@ export function AiAssistant({ foodItems, orders, settings, categories }: AiAssis
           context: {
             foodItemsCount: foodItems.length,
             ordersCount: orders.length,
-            totalRevenue: orders.reduce((sum, o) => sum + (o.total || 0), 0),
+            totalRevenue: orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
             categoriesCount: categories.length,
-            foodItems: foodItems.map(f => ({ name: f.name, price: f.price, inStock: f.inStock })),
-            recentOrders: orders.slice(0, 5).map(o => ({ id: o.id, total: o.total, status: o.status }))
+            foodItems: foodItems.map(f => ({ name: f.name, price: f.price, inStock: f.available, category: f.category, currentPreOrders: f.currentPreOrders })),
+            allOrders: orders.map(o => ({ id: o.id, total: o.totalAmount, status: o.status, date: o.createdAt, items: o.items.map((i: any) => ({ name: i.name, quantity: i.quantity })) })),
+            categories: categories.map(c => c.name),
+            settings: {
+              promoEnabled: settings?.promoEnabled,
+              promoMinAmount: settings?.promoMinAmount,
+              addons: settings?.addons
+            }
           }
         })
       });
