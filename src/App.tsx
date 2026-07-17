@@ -838,7 +838,7 @@ export default function App() {
       </header>
 
       {/* Main Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-8 relative z-10">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-28 pb-8 relative">
         <AnimatePresence mode="wait">
           {activeView === 'storefront' ? (
             <motion.div
@@ -1011,7 +1011,7 @@ export default function App() {
       </main>
 
       {/* FOOTER */}
-      <footer className="w-full bg-white dark:bg-neutral-950 border-t border-neutral-200/40 dark:border-neutral-900/40 py-8 relative z-10">
+      <footer className="w-full bg-white dark:bg-neutral-950 border-t border-neutral-200/40 dark:border-neutral-900/40 py-8 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
           <div className="space-y-1">
             <p className="text-sm font-bold text-neutral-950 dark:text-white flex items-center gap-1 justify-center md:justify-start">

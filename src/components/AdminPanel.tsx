@@ -96,7 +96,12 @@ export default function AdminPanel({
   onDeleteCategory,
   dbStatus,
 }: AdminPanelProps) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('olart-admin-logged-in') === 'true';
+    }
+    return false;
+  });
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -310,6 +315,9 @@ export default function AdminPanel({
       
       if (response.ok && data.success) {
         setIsLoggedIn(true);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('olart-admin-logged-in', 'true');
+        }
         setLoginError('');
       } else {
         setLoginError(data.error || 'Invalid administrator credentials.');
@@ -318,6 +326,9 @@ export default function AdminPanel({
       // Backend is unreachable, fallback to static credentials
       if (loginEmail.trim().toLowerCase() === fallbackEmail.trim().toLowerCase() && loginPassword === fallbackPassword) {
         setIsLoggedIn(true);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('olart-admin-logged-in', 'true');
+        }
         setLoginError('');
       } else {
         setLoginError('Invalid administrator credentials.');
@@ -327,6 +338,9 @@ export default function AdminPanel({
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('olart-admin-logged-in');
+    }
     setLoginEmail('');
     setLoginPassword('');
   };
