@@ -103,6 +103,9 @@ export default function AdminPanel({
   onUpdateCategory,
   onDeleteCategory,
   dbStatus,
+  usersList = [],
+  onDeleteUser,
+  onUpdateUser,
   onBroadcastNotification,
 }: AdminPanelProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -1296,7 +1299,7 @@ export default function AdminPanel({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-                    {(!usersList || usersList.length === 0) ? (
+                    {(!Array.isArray(usersList) || usersList.length === 0) ? (
                       <tr>
                         <td colSpan={4} className="p-8 text-center text-neutral-400 dark:text-neutral-500 text-sm font-medium">
                           No users registered yet.

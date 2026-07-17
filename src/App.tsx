@@ -1378,6 +1378,9 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
               onUpdateCategory={handleUpdateCategory}
               onDeleteCategory={handleDeleteCategory}
               dbStatus={dbStatus}
+              usersList={usersList}
+              onDeleteUser={handleDeleteUser}
+              onUpdateUser={handleUpdateUser}
               onBroadcastNotification={addAppNotification}
             />
           </motion.div>
