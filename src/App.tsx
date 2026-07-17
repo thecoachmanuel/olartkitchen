@@ -1658,11 +1658,7 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
               {/* Cart Footer */}
               {cart.length > 0 && (
                 <div className="p-5 border-t border-neutral-200 dark:border-neutral-800 space-y-4 bg-neutral-50 dark:bg-neutral-950/40">
-                  {/* Delivery Transparency Indicator */}
-                  <div className="p-3 bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200/40 dark:border-neutral-800/40 text-[10px] text-neutral-500 leading-relaxed flex items-center gap-2">
-                    <Truck size={14} className="text-amber-500 shrink-0 animate-bounce" />
-                    <span>Active Delivery Partners active in Lekki, Victoria Island, Ikoyi, Ikeja & surroundings! Standard self-pickup at Admirality Way is completely free.</span>
-                  </div>
+
 
                   <div className="flex justify-between items-center font-bold text-sm">
                     <span className="text-neutral-500 dark:text-neutral-400">Total Pre-order cost</span>
