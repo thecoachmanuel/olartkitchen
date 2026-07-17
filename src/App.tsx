@@ -452,6 +452,8 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
     }
   }, [currentUser]);
 
+
+
   // Persistent Settings for Push Notifications
   useEffect(() => {
     localStorage.setItem('olart-sound-enabled', String(soundEffectsEnabled));
@@ -838,6 +840,15 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
     setCurrentUser(null);
     triggerToast('Logged out of tracking session.');
   };
+
+  useEffect(() => {
+    if (!isInitializing && currentUser && Array.isArray(usersList)) {
+      const userExists = usersList.some(u => u.email.toLowerCase() === currentUser.email.toLowerCase());
+      if (!userExists) {
+        handleUserLogout();
+      }
+    }
+  }, [currentUser, usersList, isInitializing]);
 
   // Admin CRUD actions
   const handleAddFoodItem = (newItemData: Omit<FoodItem, 'id' | 'currentPreOrders'>) => {
