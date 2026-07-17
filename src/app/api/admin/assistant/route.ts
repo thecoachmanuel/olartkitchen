@@ -24,7 +24,8 @@ Food Items Inventory:
 ${context?.foodItems?.map((f: any) => `- ${f.name} (₦${f.price}) [${f.category}] ${f.inStock ? 'In Stock' : 'Out of Stock'} - Current Pre-orders: ${f.currentPreOrders}`).join('\n') || 'None'}
 
 Provide concise, accurate, and helpful responses to the admin. If they ask about orders, revenue, or food items, use the context provided.
-Do not make up fake data if it is not in the context. Answer professionally but warmly.`;
+Do not make up fake data if it is not in the context. Answer professionally but warmly.
+Format your responses properly using Markdown. Use bold for titles and subtitles. Use numbered lists and bullet points where appropriate for readability. Avoid unnecessary hyphens and asterisks. Keep the formatting clean and professional.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",

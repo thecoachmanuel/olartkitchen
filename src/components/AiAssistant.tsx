@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bot, Send, Loader2, Sparkles, User, AlertCircle, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import ReactMarkdown from 'react-markdown';
 
 interface AiAssistantProps {
   foodItems: any[];
@@ -162,8 +163,12 @@ export function AiAssistant({ foodItems, orders, settings, categories }: AiAssis
                 ? 'bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 rounded-tl-none text-sm'
                 : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 rounded-tl-none'
             }`}>
-              <div className="prose dark:prose-invert prose-sm max-w-none whitespace-pre-wrap">
-                {msg.content}
+              <div className="prose dark:prose-invert prose-sm max-w-none">
+                {msg.role === 'user' ? (
+                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                ) : (
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                )}
               </div>
             </div>
           </div>
