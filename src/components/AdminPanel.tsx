@@ -1564,10 +1564,23 @@ export default function AdminPanel({
                                 </div>
                               </td>
                               <td className="p-4 text-xs font-medium text-neutral-800 dark:text-neutral-300">
-                                <ul className="list-disc list-inside space-y-1">
+                                <ul className="list-disc list-inside space-y-2">
                                   {order.items.map((it, idx) => (
-                                    <li key={idx}>
-                                      {it.name} <span className="font-mono font-bold bg-neutral-100 dark:bg-neutral-900 px-1.5 py-0.5 rounded text-neutral-600 dark:text-neutral-400">x{it.quantity}</span>
+                                    <li key={idx} className="flex flex-col gap-0.5">
+                                      <div className="flex items-center gap-2">
+                                        <span>{it.name}</span>
+                                        <span className="font-mono font-bold bg-neutral-100 dark:bg-neutral-900 px-1.5 py-0.5 rounded text-neutral-600 dark:text-neutral-400">x{it.quantity}</span>
+                                      </div>
+                                      {it.addons && it.addons.length > 0 && (
+                                        <div className="pl-4 text-[10px] text-neutral-500 italic">
+                                          + {it.addons.map(a => a.name).join(', ')}
+                                        </div>
+                                      )}
+                                      {it.notes && (
+                                        <div className="pl-4 text-[10px] text-amber-600 dark:text-amber-500 font-medium">
+                                          Note: {it.notes}
+                                        </div>
+                                      )}
                                     </li>
                                   ))}
                                 </ul>

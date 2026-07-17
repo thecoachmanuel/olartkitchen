@@ -955,11 +955,23 @@ export default function UserPortal({
                                 <span>Items Ordered</span>
                                 <span>Qty</span>
                               </div>
-                              <div className="space-y-1">
+                              <div className="space-y-2">
                                 {order.items.map((it, idx) => (
-                                  <div key={idx} className="flex justify-between text-neutral-800 dark:text-neutral-200 font-semibold text-sm">
-                                    <span className="truncate">{it.name}</span>
-                                    <span className="font-mono">{it.quantity}</span>
+                                  <div key={idx} className="flex flex-col gap-0.5">
+                                    <div className="flex justify-between text-neutral-800 dark:text-neutral-200 font-semibold text-sm">
+                                      <span className="truncate">{it.name}</span>
+                                      <span className="font-mono">{it.quantity}</span>
+                                    </div>
+                                    {it.addons && it.addons.length > 0 && (
+                                      <div className="text-[11px] text-neutral-500 italic">
+                                        + {it.addons.map(a => a.name).join(', ')}
+                                      </div>
+                                    )}
+                                    {it.notes && (
+                                      <div className="text-[11px] text-amber-600 dark:text-amber-500 font-medium line-clamp-2">
+                                        Note: {it.notes}
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>
