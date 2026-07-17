@@ -14,6 +14,7 @@ You have access to the current state of the platform:
 - Food Items Count: ${context?.foodItemsCount || 0}
 - Active Categories: ${context?.categories?.join(', ') || 'None'}
 - Total Orders: ${context?.ordersCount || 0}
+- Pending Orders: ${context?.pendingOrdersCount || 0}
 - Total Revenue: ₦${context?.totalRevenue?.toLocaleString() || 0}
 - Promo Enabled: ${context?.settings?.promoEnabled ? `Yes (Min ₦${context?.settings?.promoMinAmount})` : 'No'}
 
@@ -27,18 +28,31 @@ Provide concise, accurate, and helpful responses to the admin. If they ask about
 Do not make up fake data if it is not in the context. Answer professionally but warmly.
 Format your responses properly using Markdown. Use bold for titles and subtitles. Use numbered lists and bullet points where appropriate for readability. Avoid unnecessary hyphens and asterisks. Keep the formatting clean and professional.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-lite",
-      contents: [
-        { role: 'user', parts: [{ text: systemPrompt }] },
-        { role: 'model', parts: [{ text: 'Understood. I am ready to assist.' }] },
-        { role: 'user', parts: [{ text: message }] }
-      ],
-    });
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-lite",
+        contents: [
+          { role: 'user', parts: [{ text: systemPrompt }] },
+          { role: 'model', parts: [{ text: 'Understood. I am ready to assist.' }] },
+          { role: 'user', parts: [{ text: message }] }
+        ],
+      });
+    } catch (apiError: any) {
+      console.warn("Primary model failed, falling back to gemini-2.5-flash:", apiError.message || apiError);
+      response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          { role: 'user', parts: [{ text: systemPrompt }] },
+          { role: 'model', parts: [{ text: 'Understood. I am ready to assist.' }] },
+          { role: 'user', parts: [{ text: message }] }
+        ],
+      });
+    }
 
     return NextResponse.json({ text: response.text });
-  } catch (error) {
+  } catch (error: any) {
     console.error("AI Assistant API Error:", error);
-    return NextResponse.json({ error: "Failed to generate response" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Failed to generate response" }, { status: 500 });
   }
 }

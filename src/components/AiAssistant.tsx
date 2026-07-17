@@ -51,6 +51,7 @@ export function AiAssistant({ foodItems, orders, settings, categories }: AiAssis
             context: {
               foodItemsCount: foodItems.length,
               ordersCount: orders.length,
+              pendingOrdersCount: orders.filter(o => o.status === 'pending').length,
               totalRevenue: orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
               categoriesCount: categories.length,
               foodItems: foodItems.map(f => ({ name: f.name, price: f.price, inStock: f.available, category: f.category, currentPreOrders: f.currentPreOrders })),
@@ -99,6 +100,7 @@ export function AiAssistant({ foodItems, orders, settings, categories }: AiAssis
           context: {
             foodItemsCount: foodItems.length,
             ordersCount: orders.length,
+            pendingOrdersCount: orders.filter(o => o.status === 'pending').length,
             totalRevenue: orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
             categoriesCount: categories.length,
             foodItems: foodItems.map(f => ({ name: f.name, price: f.price, inStock: f.available, category: f.category, currentPreOrders: f.currentPreOrders })),
@@ -114,13 +116,18 @@ export function AiAssistant({ foodItems, orders, settings, categories }: AiAssis
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get response');
+        let errorMsg = 'Failed to get response';
+        try {
+          const errData = await response.json();
+          if (errData.error) errorMsg = errData.error;
+        } catch (e) {}
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
       setMessages(prev => [...prev, { role: 'assistant', content: data.text }]);
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'system', content: 'An error occurred while connecting to the AI.' }]);
+    } catch (err: any) {
+      setMessages(prev => [...prev, { role: 'system', content: `Error: ${err.message || 'An error occurred while connecting to the AI.'}` }]);
     } finally {
       setIsLoading(false);
     }

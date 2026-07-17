@@ -2814,7 +2814,25 @@ export default function AdminPanel({
                               const reader = new FileReader();
                               reader.onloadend = () => {
                                 if (typeof reader.result === 'string') {
-                                  setItemImage(reader.result);
+                                  const img = new window.Image();
+                                  img.onload = () => {
+                                    const canvas = document.createElement('canvas');
+                                    let { width, height } = img;
+                                    const maxSize = 800;
+                                    if (width > height && width > maxSize) {
+                                      height = Math.round((height * maxSize) / width);
+                                      width = maxSize;
+                                    } else if (height > maxSize) {
+                                      width = Math.round((width * maxSize) / height);
+                                      height = maxSize;
+                                    }
+                                    canvas.width = width;
+                                    canvas.height = height;
+                                    const ctx = canvas.getContext('2d');
+                                    ctx?.drawImage(img, 0, 0, width, height);
+                                    setItemImage(canvas.toDataURL('image/jpeg', 0.8));
+                                  };
+                                  img.src = reader.result;
                                 }
                               };
                               reader.readAsDataURL(file);
@@ -2844,7 +2862,7 @@ export default function AdminPanel({
                       <input
                         id="modal-item-image"
                         type="text"
-                        required
+                        required={!itemImage || !itemImage.startsWith('data:')}
                         placeholder="Paste direct Unsplash image link..."
                         value={itemImage.startsWith('data:') ? '' : itemImage}
                         onChange={(e) => setItemImage(e.target.value)}

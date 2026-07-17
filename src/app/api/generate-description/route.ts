@@ -31,10 +31,19 @@ export async function POST(request: Request) {
     const ai = getAiClient();
     const prompt = `Write an extremely appetizing, elegant, and mouthwatering food description (maximum 20 words) for a meal named "${name}"${category ? ` under the category "${category}"` : ""}. Make it sound high-end, delicious, and engaging. Do not use quotation marks.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
-      contents: prompt,
-    });
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-lite',
+        contents: prompt,
+      });
+    } catch (apiError: any) {
+      console.warn('Primary model failed, falling back to gemini-2.5-flash:', apiError.message || apiError);
+      response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+      });
+    }
 
     const description = response.text?.trim() || '';
     return NextResponse.json({ description });
