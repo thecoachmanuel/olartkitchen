@@ -98,7 +98,7 @@ export default function AdminPanel({
 }: AdminPanelProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('olart-admin-logged-in') === 'true';
+      return localStorage.getItem('olart-admin-logged-in') === 'true';
     }
     return false;
   });
@@ -135,6 +135,7 @@ export default function AdminPanel({
   const [itemMaxPreOrders, setItemMaxPreOrders] = useState('');
   const [itemCategory, setItemCategory] = useState(categories[0] || 'Rice Platters');
   const [itemAvailable, setItemAvailable] = useState(true);
+  const [itemFormError, setItemFormError] = useState('');
 
   // AI Generation State and Handlers
   const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
@@ -316,7 +317,7 @@ export default function AdminPanel({
       if (response.ok && data.success) {
         setIsLoggedIn(true);
         if (typeof window !== 'undefined') {
-          sessionStorage.setItem('olart-admin-logged-in', 'true');
+          localStorage.setItem('olart-admin-logged-in', 'true');
         }
         setLoginError('');
       } else {
@@ -327,7 +328,7 @@ export default function AdminPanel({
       if (loginEmail.trim().toLowerCase() === fallbackEmail.trim().toLowerCase() && loginPassword === fallbackPassword) {
         setIsLoggedIn(true);
         if (typeof window !== 'undefined') {
-          sessionStorage.setItem('olart-admin-logged-in', 'true');
+          localStorage.setItem('olart-admin-logged-in', 'true');
         }
         setLoginError('');
       } else {
@@ -339,7 +340,7 @@ export default function AdminPanel({
   const handleLogout = () => {
     setIsLoggedIn(false);
     if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('olart-admin-logged-in');
+      localStorage.removeItem('olart-admin-logged-in');
     }
     setLoginEmail('');
     setLoginPassword('');
@@ -352,6 +353,7 @@ export default function AdminPanel({
     setItemDescription('');
     setItemPrice('');
     setItemImage('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800');
+    setItemFormError('');
     
     // Default close time to 4 hours from now
     const fourHours = new Date();
@@ -374,6 +376,7 @@ export default function AdminPanel({
     setItemDescription(item.description);
     setItemPrice(item.price.toString());
     setItemImage(item.image);
+    setItemFormError('');
     
     // Parse ISO time back to datetime-local local timezone format
     const itemDate = new Date(item.closeTime);
@@ -389,7 +392,21 @@ export default function AdminPanel({
 
   const handleItemSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const targetCloseTime = new Date(itemCloseTime).toISOString();
+    setItemFormError('');
+
+    if (!itemCloseTime) {
+      setItemFormError('Please select a closing date and time.');
+      return;
+    }
+
+    const selectedTime = new Date(itemCloseTime);
+    const now = new Date();
+    if (selectedTime <= now) {
+      setItemFormError('Pre-order closing target must be a future date and time.');
+      return;
+    }
+
+    const targetCloseTime = selectedTime.toISOString();
     
     const itemData = {
       name: itemName,
@@ -567,6 +584,13 @@ export default function AdminPanel({
     { id: 'orders' as const, label: `Orders Ledger (${orders.length})`, icon: ShoppingCart },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
+
+  const minDateTimeLocal = (() => {
+    const now = new Date();
+    const offset = now.getTimezoneOffset();
+    const localNow = new Date(now.getTime() - (offset * 60 * 1000));
+    return localNow.toISOString().slice(0, 16);
+  })();
 
   return (
     <div className="w-full flex flex-col lg:flex-row gap-8 items-start">
@@ -2023,6 +2047,14 @@ export default function AdminPanel({
             </div>
 
             <form onSubmit={handleItemSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
+              {itemFormError && (
+                <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200/40 dark:border-red-900/40 flex items-start gap-2.5">
+                  <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
+                  <p className="text-xs font-semibold text-red-600 dark:text-red-400">
+                    {itemFormError}
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label htmlFor="modal-item-name" className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
@@ -2126,6 +2158,7 @@ export default function AdminPanel({
                     id="modal-item-closetime"
                     type="datetime-local"
                     required
+                    min={minDateTimeLocal}
                     value={itemCloseTime}
                     onChange={(e) => setItemCloseTime(e.target.value)}
                     className="w-full px-3.5 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono"

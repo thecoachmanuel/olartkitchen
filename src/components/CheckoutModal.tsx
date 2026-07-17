@@ -115,21 +115,23 @@ export default function CheckoutModal({
     }
 
     const itemsSummary = createdOrder.items
-      .map((item) => `- ${item.name} (Qty: ${item.quantity})`)
+      .map((item) => `• ${item.name} (${formatNaira(item.price)} each) x ${item.quantity} = ${formatNaira(item.price * item.quantity)}`)
       .join('\n');
 
-    const text = `*NEW PRE-ORDER - OLART KITCHEN*%0A%0A` +
-      `*Order ID:* ${createdOrder.id}%0A` +
-      `*Customer:* ${createdOrder.customerName}%0A` +
-      `*Phone:* ${createdOrder.customerPhone}%0A` +
-      `*Delivery Method:* ${createdOrder.deliveryMethod.toUpperCase()}%0A` +
-      (createdOrder.deliveryAddress ? `*Address:* ${createdOrder.deliveryAddress}%0A` : '') +
-      `%0A*ITEMS ORDERED:*%0A${itemsSummary}%0A%0A` +
-      `*TOTAL AMOUNT:* ${formatNaira(createdOrder.totalAmount)}%0A%0A` +
-      `*Payment Ref:* ${createdOrder.paymentReference}%0A%0A` +
+    const messageText = 
+      `*NEW PRE-ORDER - OLART KITCHEN*\n\n` +
+      `*Order ID:* ${createdOrder.id}\n` +
+      `*Customer Name:* ${createdOrder.customerName}\n` +
+      `*Email Address:* ${createdOrder.customerEmail}\n` +
+      `*Phone (WhatsApp):* ${createdOrder.customerPhone}\n` +
+      `*Delivery Method:* ${createdOrder.deliveryMethod === 'pickup' ? 'Self Pickup' : 'Home Delivery'}\n` +
+      (createdOrder.deliveryAddress ? `*Delivery Address:* ${createdOrder.deliveryAddress}\n` : '') +
+      `\n*ITEMS ORDERED:*\n${itemsSummary}\n\n` +
+      `*TOTAL AMOUNT PAID:* ${formatNaira(createdOrder.totalAmount)}\n\n` +
+      `*Payment Reference:* ${createdOrder.paymentReference}\n\n` +
       `_I have attached my payment receipt below. Please confirm receipt of my bank transfer so my pre-order countdown remains guaranteed!_`;
 
-    return `https://wa.me/${cleanNumber}?text=${text}`;
+    return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(messageText)}`;
   };
 
   return (
@@ -207,88 +209,141 @@ export default function CheckoutModal({
                 </div>
               </div>
 
+              {/* Profile Captured Info for Logged In User */}
+              {currentUser && (
+                <div className="p-4 rounded-xl bg-amber-50/40 dark:bg-neutral-900/40 border border-amber-200/20 dark:border-neutral-800 flex items-start gap-3">
+                  <div className="mt-0.5 p-1.5 rounded-lg bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 shrink-0">
+                    <User size={16} />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-neutral-800 dark:text-neutral-200">
+                      Ordering as <span className="text-amber-600 dark:text-amber-400">{currentUser.name}</span>
+                    </p>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                      Your details are loaded from your profile: <span className="font-semibold">{currentUser.email}</span> • <span className="font-semibold">{currentUser.phone}</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Name & Email */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label htmlFor="checkout-name" className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
-                    Full Name <span className="text-amber-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+              {!currentUser && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label htmlFor="checkout-name" className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
+                      Full Name <span className="text-amber-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+                      <input
+                        id="checkout-name"
+                        type="text"
+                        required
+                        placeholder="e.g. Tunde Alao"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label htmlFor="checkout-email" className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
+                      Email Address <span className="text-amber-500">*</span>
+                    </label>
                     <input
-                      id="checkout-name"
-                      type="text"
+                      id="checkout-email"
+                      type="email"
                       required
-                      placeholder="e.g. Tunde Alao"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      placeholder="e.g. tunde@gmail.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500"
                     />
                   </div>
                 </div>
-
-                <div className="space-y-1">
-                  <label htmlFor="checkout-email" className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
-                    Email Address <span className="text-amber-500">*</span>
-                  </label>
-                  <input
-                    id="checkout-email"
-                    type="email"
-                    required
-                    placeholder="e.g. tunde@gmail.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  />
-                </div>
-              </div>
+              )}
 
               {/* Phone & Delivery Method */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label htmlFor="checkout-phone" className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
-                    Phone Number (WhatsApp) <span className="text-amber-500">*</span>
-                  </label>
-                  <input
-                    id="checkout-phone"
-                    type="tel"
-                    required
-                    placeholder="e.g. 08031234567"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  />
-                </div>
+                {!currentUser ? (
+                  <>
+                    <div className="space-y-1">
+                      <label htmlFor="checkout-phone" className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
+                        Phone Number (WhatsApp) <span className="text-amber-500">*</span>
+                      </label>
+                      <input
+                        id="checkout-phone"
+                        type="tel"
+                        required
+                        placeholder="e.g. 08031234567"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      />
+                    </div>
 
-                <div className="space-y-1">
-                  <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
-                    Pre-Order Fulfilment <span className="text-amber-500">*</span>
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 h-[42px]">
-                    <button
-                      type="button"
-                      onClick={() => setDeliveryMethod('pickup')}
-                      className={`rounded-xl text-sm font-bold border cursor-pointer flex items-center justify-center transition-all ${
-                        deliveryMethod === 'pickup'
-                          ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                          : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900'
-                      }`}
-                    >
-                      Self Pickup
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeliveryMethod('delivery')}
-                      className={`rounded-xl text-sm font-bold border cursor-pointer flex items-center justify-center transition-all ${
-                        deliveryMethod === 'delivery'
-                          ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                          : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900'
-                      }`}
-                    >
-                      Home Delivery
-                    </button>
+                    <div className="space-y-1">
+                      <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
+                        Pre-Order Fulfilment <span className="text-amber-500">*</span>
+                      </label>
+                      <div className="grid grid-cols-2 gap-2 h-[42px]">
+                        <button
+                          type="button"
+                          onClick={() => setDeliveryMethod('pickup')}
+                          className={`rounded-xl text-sm font-bold border cursor-pointer flex items-center justify-center transition-all ${
+                            deliveryMethod === 'pickup'
+                              ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                              : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900'
+                          }`}
+                        >
+                          Self Pickup
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeliveryMethod('delivery')}
+                          className={`rounded-xl text-sm font-bold border cursor-pointer flex items-center justify-center transition-all ${
+                            deliveryMethod === 'delivery'
+                              ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                              : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900'
+                          }`}
+                        >
+                          Home Delivery
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-sm font-bold text-neutral-700 dark:text-neutral-300">
+                      Pre-Order Fulfilment <span className="text-amber-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 h-[42px]">
+                      <button
+                        type="button"
+                        onClick={() => setDeliveryMethod('pickup')}
+                        className={`rounded-xl text-sm font-bold border cursor-pointer flex items-center justify-center transition-all ${
+                          deliveryMethod === 'pickup'
+                            ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                            : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900'
+                        }`}
+                      >
+                        Self Pickup
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeliveryMethod('delivery')}
+                        className={`rounded-xl text-sm font-bold border cursor-pointer flex items-center justify-center transition-all ${
+                          deliveryMethod === 'delivery'
+                            ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                            : 'border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900'
+                        }`}
+                      >
+                        Home Delivery
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Conditionally Show Delivery Address */}
