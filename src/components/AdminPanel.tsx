@@ -110,12 +110,12 @@ export default function AdminPanel({
   const [loginError, setLoginError] = useState('');
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'food' | 'orders' | 'categories' | 'settings' | 'promo'>(() => {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'food' | 'orders' | 'categories' | 'settings' | 'promo' | 'addons'>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab');
-      if (tab === 'dashboard' || tab === 'food' || tab === 'orders' || tab === 'categories' || tab === 'settings' || tab === 'promo') {
-        return tab as 'dashboard' | 'food' | 'orders' | 'categories' | 'settings' | 'promo';
+      if (tab === 'dashboard' || tab === 'food' || tab === 'orders' || tab === 'categories' || tab === 'settings' || tab === 'promo' || tab === 'addons') {
+        return tab as 'dashboard' | 'food' | 'orders' | 'categories' | 'settings' | 'promo' | 'addons';
       }
     }
     return 'dashboard';
@@ -235,6 +235,7 @@ export default function AdminPanel({
   const [newAddonPrice, setNewAddonPrice] = useState('');
   const [settingsSavedMessage, setSettingsSavedMessage] = useState(false);
   const [promoSavedMessage, setPromoSavedMessage] = useState(false);
+  const [addonsSavedMessage, setAddonsSavedMessage] = useState(false);
   const [promoCopiedId, setPromoCopiedId] = useState<string | null>(null);
 
   // Live from Kitchen form state
@@ -527,6 +528,16 @@ export default function AdminPanel({
     setTimeout(() => setPromoSavedMessage(false), 3000);
   };
 
+  const handleSaveAddons = (e: React.FormEvent) => {
+    e.preventDefault();
+    onUpdateSettings({
+      ...adminSettings,
+      addons: settingsAddons,
+    });
+    setAddonsSavedMessage(true);
+    setTimeout(() => setAddonsSavedMessage(false), 3000);
+  };
+
   // Calculate stats values
   const totalRevenue = orders
     .filter(o => o.status === 'confirmed' || o.status === 'preparing' || o.status === 'paid' || o.status === 'delivered')
@@ -659,6 +670,7 @@ export default function AdminPanel({
     { id: 'dashboard' as const, label: 'Stats Summary', icon: LayoutDashboard },
     { id: 'food' as const, label: 'Food Items', icon: Utensils },
     { id: 'categories' as const, label: 'Meal Categories', icon: SlidersHorizontal },
+    { id: 'addons' as const, label: 'Premium Sides', icon: Sparkles },
     { id: 'orders' as const, label: 'Orders Ledger', icon: ShoppingCart, badge: orders.length },
     { id: 'promo' as const, label: 'Milestone Promo', icon: Gift, badge: settingsPromoEnabled ? qualifiedOrders.length : 0 },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
@@ -855,6 +867,7 @@ export default function AdminPanel({
             {activeTab === 'dashboard' && 'Visual statistics, pre-order totals, active trends, and real-time ledger status.'}
             {activeTab === 'food' && 'Manage food item inventory, upload photos, change prices, and set available stocks.'}
             {activeTab === 'categories' && 'Add and rename meal categories to organize the pre-order catalog.'}
+            {activeTab === 'addons' && 'Configure premium sides and addons available to customers during checkout.'}
             {activeTab === 'orders' && 'Confirm customer pre-orders, update kitchen workflow states, and review customer contact cards.'}
             {activeTab === 'promo' && 'Configure and monitor pre-order milestone promo rewards, minimum spend thresholds, and qualified customers.'}
             {activeTab === 'settings' && 'Update delivery configurations, banking details, countdown clocks, and custom brand assets.'}
@@ -1870,90 +1883,7 @@ export default function AdminPanel({
                 )}
               </div>
 
-              {/* Premium Sides / Addons Management */}
-              <div className="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950/40 space-y-4">
-                <div>
-                  <h3 className="text-xs font-black text-neutral-900 dark:text-neutral-100 uppercase tracking-wider">
-                    Premium Sides / Addons Config
-                  </h3>
-                  <p className="text-[11px] text-neutral-500 leading-normal mt-0.5">
-                    Manage food sides/addons offered to users during checkout. Only addons listed here will be shown to customers.
-                  </p>
-                </div>
 
-                {/* Addon Form & List */}
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                    <div className="sm:col-span-6 space-y-1">
-                      <label htmlFor="new-addon-name" className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">
-                        Addon Name
-                      </label>
-                      <input
-                        id="new-addon-name"
-                        type="text"
-                        placeholder="e.g. Extra Turkey, Cold Chapman"
-                        className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-sans"
-                        value={newAddonName}
-                        onChange={(e) => setNewAddonName(e.target.value)}
-                      />
-                    </div>
-                    <div className="sm:col-span-4 space-y-1">
-                      <label htmlFor="new-addon-price" className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">
-                        Addon Price (₦)
-                      </label>
-                      <input
-                        id="new-addon-price"
-                        type="number"
-                        placeholder="e.g. 2000"
-                        className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono"
-                        value={newAddonPrice}
-                        onChange={(e) => setNewAddonPrice(e.target.value)}
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <button
-                        type="button"
-                        onClick={handleAddAddon}
-                        className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-neutral-950 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm"
-                      >
-                        <Plus size={14} />
-                        <span>Add</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Addons List */}
-                  <div className="space-y-2 mt-2">
-                    {settingsAddons.length === 0 ? (
-                      <p className="text-[11px] text-neutral-400 italic text-center py-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-xl border border-dashed border-neutral-200 dark:border-neutral-800">
-                        No active addons configured. Customers will see no addons available.
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
-                        {settingsAddons.map((addon) => (
-                          <div 
-                            key={addon.id}
-                            className="flex items-center justify-between p-2.5 rounded-xl border border-neutral-200/60 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-neutral-900/10 text-xs"
-                          >
-                            <div className="font-semibold text-neutral-800 dark:text-neutral-200 flex flex-col">
-                              <span>{addon.name}</span>
-                              <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">₦{addon.price.toLocaleString()}</span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveAddon(addon.id)}
-                              className="p-1 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer"
-                              title="Delete Addon"
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
 
               {/* Live from Chef Olart's Kitchen Broadcast Panel */}
               <div className="p-4 rounded-xl border border-amber-500/15 bg-amber-500/5 space-y-4">
@@ -2051,6 +1981,114 @@ export default function AdminPanel({
                 Save Settings
               </button>
             </form>
+          </div>
+        )}
+
+        {/* TAB: PREMIUM SIDES & ADDONS */}
+        {activeTab === 'addons' && (
+          <div className="max-w-2xl animate-fade-in">
+            <div className="p-6 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-800/50 shadow-sm space-y-6">
+              <div>
+                <h2 className="text-base font-bold text-neutral-950 dark:text-white">Premium Sides & Addons</h2>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
+                  Configure high-quality sides, drinks, and addons offered to customers during checkout to increase average order value.
+                </p>
+              </div>
+
+              {/* Addon Form & List */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                  <div className="sm:col-span-6 space-y-1">
+                    <label htmlFor="new-tab-addon-name" className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">
+                      Addon Name
+                    </label>
+                    <input
+                      id="new-tab-addon-name"
+                      type="text"
+                      placeholder="e.g. Extra Turkey, Cold Chapman"
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-sans"
+                      value={newAddonName}
+                      onChange={(e) => setNewAddonName(e.target.value)}
+                    />
+                  </div>
+                  <div className="sm:col-span-4 space-y-1">
+                    <label htmlFor="new-tab-addon-price" className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">
+                      Addon Price (₦)
+                    </label>
+                    <input
+                      id="new-tab-addon-price"
+                      type="number"
+                      placeholder="e.g. 2000"
+                      className="w-full px-3 py-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono"
+                      value={newAddonPrice}
+                      onChange={(e) => setNewAddonPrice(e.target.value)}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <button
+                      type="button"
+                      onClick={handleAddAddon}
+                      className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 text-white dark:text-neutral-950 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-sm"
+                    >
+                      <Plus size={14} />
+                      <span>Add</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Addons List */}
+                <div className="space-y-2 mt-2">
+                  <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">
+                    Active Addons List
+                  </label>
+                  {settingsAddons.length === 0 ? (
+                    <p className="text-[11px] text-neutral-400 italic text-center py-6 bg-neutral-50 dark:bg-neutral-900/50 rounded-xl border border-dashed border-neutral-200 dark:border-neutral-800">
+                      No active addons configured. Customers will see no addons available.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-80 overflow-y-auto pr-1">
+                      {settingsAddons.map((addon) => (
+                        <div 
+                          key={addon.id}
+                          className="flex items-center justify-between p-3 rounded-xl border border-neutral-200/60 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-neutral-900/10 text-xs"
+                        >
+                          <div className="font-semibold text-neutral-800 dark:text-neutral-200 flex flex-col">
+                            <span>{addon.name}</span>
+                            <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">₦{addon.price.toLocaleString()}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveAddon(addon.id)}
+                            className="p-1 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer"
+                            title="Delete Addon"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {addonsSavedMessage && (
+                <div className="flex items-center gap-2 p-3 text-xs rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-semibold animate-fade-in">
+                  <CheckCircle2 size={14} className="shrink-0" />
+                  <span>Premium sides & addons config saved successfully!</span>
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-neutral-100 dark:border-neutral-900/60">
+                <button
+                  type="button"
+                  onClick={handleSaveAddons}
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white cursor-pointer shadow-md shadow-amber-500/10 transition-colors"
+                  id="btn-save-addons"
+                >
+                  Save Sides & Addons
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
