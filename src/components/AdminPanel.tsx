@@ -42,6 +42,8 @@ interface AdminPanelProps {
   onDeleteCategory: (category: string) => void;
   dbStatus?: { isConnected: boolean; mode: string; databaseName: string | null; error: string | null } | null;
   usersList?: any[];
+  onDeleteUser?: (email: string) => void;
+  onUpdateUser?: (email: string, data: any) => void;
   onBroadcastNotification?: (title: string, message: string, type: 'order_status' | 'system' | 'reminder' | 'deal') => void;
 }
 
@@ -1302,28 +1304,36 @@ export default function AdminPanel({
                       </tr>
                     ) : (
                       usersList.map((user: any, idx: number) => {
-                        const userOrders = orders.filter(o => o.customerEmail?.toLowerCase() === user.email.toLowerCase() || o.customerPhone === user.phone);
+                        const userEmail = user.email || '';
+                        const userPhone = user.phone || '';
+                        const userName = user.name || 'Unknown';
+                        const userCreatedAt = user.createdAt || new Date().toISOString();
+                        
+                        const userOrders = orders.filter(o => 
+                          (o.customerEmail && userEmail && o.customerEmail.toLowerCase() === userEmail.toLowerCase()) || 
+                          (o.customerPhone && userPhone && o.customerPhone === userPhone)
+                        );
                         return (
                           <tr key={idx} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/20 transition-all">
                             <td className="p-4">
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs uppercase shadow-sm">
-                                  {user.name.charAt(0)}
+                                  {userName.charAt(0)}
                                 </div>
                                 <div>
                                   <p className="text-sm font-bold text-neutral-900 dark:text-neutral-50">
-                                    {user.name}
+                                    {userName}
                                   </p>
                                 </div>
                               </div>
                             </td>
                             <td className="p-4">
                               <div className="flex flex-col gap-1">
-                                <a href={`mailto:${user.email}`} className="text-xs font-mono text-neutral-500 hover:text-indigo-600 transition-colors flex items-center gap-1.5">
-                                  <Mail size={12} /> {user.email}
+                                <a href={`mailto:${userEmail}`} className="text-xs font-mono text-neutral-500 hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                                  <Mail size={12} /> {userEmail}
                                 </a>
-                                <a href={`tel:${user.phone}`} className="text-xs font-mono text-neutral-500 hover:text-indigo-600 transition-colors flex items-center gap-1.5">
-                                  <Phone size={12} /> {user.phone}
+                                <a href={`tel:${userPhone}`} className="text-xs font-mono text-neutral-500 hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                                  <Phone size={12} /> {userPhone}
                                 </a>
                               </div>
                             </td>
@@ -1333,11 +1343,38 @@ export default function AdminPanel({
                               </span>
                             </td>
                             <td className="p-4 text-right">
-                              <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
-                                {new Date(user.createdAt).toLocaleDateString(undefined, {
-                                  year: 'numeric', month: 'short', day: 'numeric'
-                                })}
-                              </span>
+                              <div className="flex flex-col items-end gap-2">
+                                <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                                  {new Date(userCreatedAt).toLocaleDateString(undefined, {
+                                    year: 'numeric', month: 'short', day: 'numeric'
+                                  })}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => {
+                                      const newName = window.prompt('Update user name:', userName);
+                                      if (newName && newName !== userName) {
+                                        onUpdateUser?.(userEmail, { name: newName });
+                                      }
+                                    }}
+                                    className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-600 hover:text-amber-600 cursor-pointer"
+                                    title="Edit"
+                                  >
+                                    <Edit2 size={12} />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (window.confirm('Are you sure you want to delete this user?')) {
+                                        onDeleteUser?.(userEmail);
+                                      }
+                                    }}
+                                    className="p-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 cursor-pointer"
+                                    title="Delete"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              </div>
                             </td>
                           </tr>
                         );
