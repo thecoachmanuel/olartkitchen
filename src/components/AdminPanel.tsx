@@ -6,7 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   KeyRound, LogOut, LayoutDashboard, Utensils, ShoppingCart, Settings, 
-  Plus, Edit2, Trash2, CheckCircle2, AlertCircle, TrendingUp, DollarSign, Users, Clock, ToggleLeft, ToggleRight, X, SlidersHorizontal, Upload, Sparkles, Mail, Phone, Menu
+  Plus, Edit2, Trash2, CheckCircle2, AlertCircle, TrendingUp, DollarSign, Users, Clock, ToggleLeft, ToggleRight, X, SlidersHorizontal, Upload, Sparkles, Mail, Phone, Menu,
+  Gift, Send
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FoodItem, Order, AdminSettings } from '../types';
@@ -37,6 +38,7 @@ interface AdminPanelProps {
   onUpdateCategory: (oldName: string, newName: string) => void;
   onDeleteCategory: (category: string) => void;
   dbStatus?: { isConnected: boolean; mode: string; databaseName: string | null; error: string | null } | null;
+  onBroadcastNotification?: (title: string, message: string, type: 'order_status' | 'system' | 'reminder' | 'deal') => void;
 }
 
 const CHART_COLORS = [
@@ -95,6 +97,7 @@ export default function AdminPanel({
   onUpdateCategory,
   onDeleteCategory,
   dbStatus,
+  onBroadcastNotification,
 }: AdminPanelProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -215,7 +218,14 @@ export default function AdminPanel({
   const [settingsContactAddress, setSettingsContactAddress] = useState(adminSettings.contactAddress || 'Plot 14, Admiralty Way, Lekki Phase 1, Lagos, Nigeria');
   const [settingsContactHours, setSettingsContactHours] = useState(adminSettings.contactHours || 'Monday - Saturday: 9:00 AM - 9:00 PM, Sunday: 12:00 PM - 8:00 PM');
   const [settingsContactDescription, setSettingsContactDescription] = useState(adminSettings.contactDescription || 'Have questions about our premium Nigerian dishes, custom event catering, or pre-order deliveries? Reach out to our culinary experts!');
+  const [settingsPromoMinAmount, setSettingsPromoMinAmount] = useState(adminSettings.promoMinAmount ?? 15000);
+  const [settingsPromoRewardName, setSettingsPromoRewardName] = useState(adminSettings.promoRewardName || 'Free bottle of legendary Hibiscus Zobo');
   const [settingsSavedMessage, setSettingsSavedMessage] = useState(false);
+
+  // Live from Kitchen form state
+  const [kitchenLivePreset, setKitchenLivePreset] = useState('Olart is seasoning the fresh croaker fish for our Signature Seafood Okro!');
+  const [kitchenLiveMessage, setKitchenLiveMessage] = useState('');
+  const [kitchenLiveSentMessage, setKitchenLiveSentMessage] = useState(false);
 
   useEffect(() => {
     if (adminSettings) {
@@ -235,6 +245,8 @@ export default function AdminPanel({
       setSettingsContactAddress(adminSettings.contactAddress || 'Plot 14, Admiralty Way, Lekki Phase 1, Lagos, Nigeria');
       setSettingsContactHours(adminSettings.contactHours || 'Monday - Saturday: 9:00 AM - 9:00 PM, Sunday: 12:00 PM - 8:00 PM');
       setSettingsContactDescription(adminSettings.contactDescription || 'Have questions about our premium Nigerian dishes, custom event catering, or pre-order deliveries? Reach out to our culinary experts!');
+      setSettingsPromoMinAmount(adminSettings.promoMinAmount ?? 15000);
+      setSettingsPromoRewardName(adminSettings.promoRewardName || 'Free bottle of legendary Hibiscus Zobo');
     }
   }, [adminSettings]);
 
@@ -449,6 +461,8 @@ export default function AdminPanel({
       contactAddress: settingsContactAddress,
       contactHours: settingsContactHours,
       contactDescription: settingsContactDescription,
+      promoMinAmount: Number(settingsPromoMinAmount) || 0,
+      promoRewardName: settingsPromoRewardName,
     });
     setSettingsSavedMessage(true);
     setTimeout(() => setSettingsSavedMessage(false), 3000);
@@ -1731,6 +1745,129 @@ export default function AdminPanel({
                     </p>
                   </div>
                 )}
+              </div>
+
+              {/* Milestone Promo Configuration */}
+              <div className="p-4 rounded-xl border border-neutral-200/60 dark:border-neutral-800/60 bg-neutral-50/50 dark:bg-neutral-950/20 space-y-4">
+                <h3 className="text-xs font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-wide flex items-center gap-1.5">
+                  <Gift size={14} className="text-amber-500" />
+                  <span>Pre-Order Milestone Promo</span>
+                </h3>
+                <p className="text-[11px] text-neutral-500 leading-normal">
+                  Set the dynamic minimum order threshold and reward item name. This updates the user's cart progress bar in real time.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label htmlFor="settings-promo-amount" className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                      Minimum Order Amount (₦)
+                    </label>
+                    <input
+                      id="settings-promo-amount"
+                      type="number"
+                      required
+                      value={settingsPromoMinAmount}
+                      onChange={(e) => setSettingsPromoMinAmount(Number(e.target.value) || 0)}
+                      placeholder="e.g. 15000"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label htmlFor="settings-promo-reward" className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                      Promo Reward / Free Gift Name
+                    </label>
+                    <input
+                      id="settings-promo-reward"
+                      type="text"
+                      required
+                      value={settingsPromoRewardName}
+                      onChange={(e) => setSettingsPromoRewardName(e.target.value)}
+                      placeholder="e.g. Free bottle of legendary Hibiscus Zobo"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 font-sans"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Live from Chef Olart's Kitchen Broadcast Panel */}
+              <div className="p-4 rounded-xl border border-amber-500/15 bg-amber-500/5 space-y-4">
+                <h3 className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <Utensils size={14} className="text-amber-500" />
+                  <span>Broadcast Live From Chef Olart's Kitchen</span>
+                </h3>
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-normal">
+                  Send real-time progress broadcasts directly to active pre-order customers. Mention the chef as <strong>Olart</strong> to preserve brand authority.
+                </p>
+
+                <div className="space-y-3">
+                  {/* Preset Suggestions */}
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Quick Presets:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        'Olart is seasoning the fresh croaker fish for our Signature Seafood Okro!',
+                        'Olart has just started roasting smoky firewood spices for our signature Jollof!',
+                        'Chef Olart is wrap-steaming spicy Efo Riro with fresh locust beans!',
+                        'Olart is golden-frying the crispy puff-puff platter for sweet cravings!'
+                      ].map((presetText) => (
+                        <button
+                          key={presetText}
+                          type="button"
+                          onClick={() => {
+                            setKitchenLivePreset(presetText);
+                            setKitchenLiveMessage(presetText);
+                          }}
+                          className={`text-[10px] px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer text-left leading-snug ${
+                            kitchenLivePreset === presetText
+                              ? 'bg-amber-500 border-amber-500 text-white font-bold font-sans'
+                              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50'
+                          }`}
+                        >
+                          {presetText}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Input field */}
+                  <div className="space-y-1">
+                    <label htmlFor="kitchen-broadcast-msg" className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                      Broadcast Message Customizer
+                    </label>
+                    <textarea
+                      id="kitchen-broadcast-msg"
+                      rows={2}
+                      value={kitchenLiveMessage || kitchenLivePreset}
+                      onChange={(e) => setKitchenLiveMessage(e.target.value)}
+                      placeholder="Write what Chef Olart is doing in the kitchen right now..."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500 font-sans resize-none"
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const msgToSend = kitchenLiveMessage || kitchenLivePreset;
+                      if (onBroadcastNotification) {
+                        onBroadcastNotification('🍳 Live from Chef Olart\'s Kitchen!', msgToSend, 'system');
+                        setKitchenLiveSentMessage(true);
+                        setTimeout(() => setKitchenLiveSentMessage(false), 3000);
+                      }
+                    }}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white cursor-pointer transition-all shadow-sm"
+                  >
+                    <Send size={12} />
+                    <span>Send Live Broadcast Notification</span>
+                  </button>
+
+                  {kitchenLiveSentMessage && (
+                    <div className="flex items-center gap-2 p-2 text-[11px] rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-semibold animate-fade-in">
+                      <CheckCircle2 size={12} className="shrink-0" />
+                      <span>Broadcast alert delivered to all active users!</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {settingsSavedMessage && (

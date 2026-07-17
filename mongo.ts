@@ -3,7 +3,7 @@ import { MongoClient, Db } from 'mongodb';
 interface MongoConnection {
   client: MongoClient | null;
   db: Db | null;
-  isConnecting: boolean;
+  promise: Promise<{ db: Db | null; error: string | null; isConnected: boolean }> | null;
 }
 
 const globalWithMongo = globalThis as unknown as {
@@ -14,7 +14,7 @@ if (!globalWithMongo._mongoConnection) {
   globalWithMongo._mongoConnection = {
     client: null,
     db: null,
-    isConnecting: false,
+    promise: null,
   };
 }
 
@@ -41,39 +41,34 @@ export async function getMongoDb(): Promise<{ db: Db | null; error: string | nul
     return { db: connectionState.db, error: null, isConnected: true };
   }
 
-  if (connectionState.isConnecting) {
-    // Wait a brief moment or retry
-    for (let i = 0; i < 10; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      if (connectionState.db && connectionState.client) {
-        return { db: connectionState.db, error: null, isConnected: true };
-      }
-    }
+  if (connectionState.promise) {
+    return connectionState.promise;
   }
 
-  try {
-    connectionState.isConnecting = true;
-    console.log('Attempting to connect to MongoDB...');
-    const clientInstance = new MongoClient(uri, {
-      connectTimeoutMS: 8000,
-      socketTimeoutMS: 8000,
-    });
-    await clientInstance.connect();
-    const dbInstance = clientInstance.db();
-    console.log(`Connected to MongoDB successfully! Database: ${dbInstance.databaseName}`);
-    
-    connectionState.client = clientInstance;
-    connectionState.db = dbInstance;
-    connectionState.isConnecting = false;
-    
-    return { db: dbInstance, error: null, isConnected: true };
-  } catch (err: any) {
-    console.error('Failed to connect to MongoDB:', err);
-    connectionState.client = null;
-    connectionState.db = null;
-    connectionState.isConnecting = false;
-    return { db: null, error: err?.message || 'Unknown MongoDB connection error', isConnected: false };
-  }
+  connectionState.promise = (async () => {
+    try {
+      console.log('Attempting to connect to MongoDB...');
+      const clientInstance = new MongoClient(uri, {
+        connectTimeoutMS: 8000,
+        socketTimeoutMS: 8000,
+      });
+      await clientInstance.connect();
+      const dbInstance = clientInstance.db();
+      console.log(`Connected to MongoDB successfully! Database: ${dbInstance.databaseName}`);
+      
+      connectionState.client = clientInstance;
+      connectionState.db = dbInstance;
+      return { db: dbInstance, error: null, isConnected: true };
+    } catch (err: any) {
+      console.error('Failed to connect to MongoDB:', err);
+      connectionState.client = null;
+      connectionState.db = null;
+      connectionState.promise = null; // Reset so that a future call can try again
+      return { db: null, error: err?.message || 'Unknown MongoDB connection error', isConnected: false };
+    }
+  })();
+
+  return connectionState.promise;
 }
 
 export async function getDbStatus(): Promise<DbStatus> {

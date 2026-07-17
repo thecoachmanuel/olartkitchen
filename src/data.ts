@@ -116,7 +116,9 @@ export const DEFAULT_ADMIN_SETTINGS: AdminSettings = {
   contactPhone: '+2348168882014',
   contactAddress: 'Plot 14, Admiralty Way, Lekki Phase 1, Lagos, Nigeria',
   contactHours: 'Monday - Saturday: 9:00 AM - 9:00 PM, Sunday: 12:00 PM - 8:00 PM',
-  contactDescription: 'Have questions about our premium Nigerian dishes, custom event catering, or pre-order deliveries? Reach out to our culinary experts!'
+  contactDescription: 'Have questions about our premium Nigerian dishes, custom event catering, or pre-order deliveries? Reach out to our culinary experts!',
+  promoMinAmount: 15000,
+  promoRewardName: 'Free bottle of legendary Hibiscus Zobo'
 };
 
 export const FOOD_CATEGORIES = ['All', 'Rice Platters', 'Swallow & Soups', 'Ewa Aganyin & Beans', 'Grills & Suya', 'Chops & Sweet Things'];

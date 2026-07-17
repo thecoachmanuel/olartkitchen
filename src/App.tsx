@@ -206,10 +206,6 @@ export default function App() {
     const stored = localStorage.getItem('olart-desktop-push-enabled');
     return stored === 'true';
   });
-  const [simulationSpeed, setSimulationSpeed] = useState<'normal' | 'fast' | 'off'>(() => {
-    const stored = localStorage.getItem('olart-sim-speed');
-    return (stored as any) || 'fast';
-  });
   const [idleCartReminderEnabled, setIdleCartReminderEnabled] = useState(() => {
     const stored = localStorage.getItem('olart-idle-cart-reminder');
     return stored ? stored === 'true' : true;
@@ -373,76 +369,8 @@ export default function App() {
   }, [desktopPushEnabled]);
 
   useEffect(() => {
-    localStorage.setItem('olart-sim-speed', simulationSpeed);
-  }, [simulationSpeed]);
-
-  useEffect(() => {
     localStorage.setItem('olart-idle-cart-reminder', String(idleCartReminderEnabled));
   }, [idleCartReminderEnabled]);
-
-  // Active Order State Progression Simulation Loop
-  useEffect(() => {
-    if (simulationSpeed === 'off') return;
-
-    const intervalMs = simulationSpeed === 'fast' ? 14000 : 35000;
-
-    const timer = setInterval(() => {
-      setOrders((prevOrders) => {
-        // Find an active order that can transition
-        const orderToAdvanceIndex = prevOrders.findIndex(
-          (o) => o.status !== 'confirmed' && o.status !== 'cancelled'
-        );
-
-        if (orderToAdvanceIndex === -1) return prevOrders;
-
-        const updatedOrders = [...prevOrders];
-        const order = updatedOrders[orderToAdvanceIndex];
-        let nextStatus: Order['status'] = order.status;
-        let title = '';
-        let desc = '';
-
-        if (order.status === 'pending') {
-          nextStatus = 'paid';
-          title = '💳 Bank Transfer Verified!';
-          desc = `Portions for Order ${order.id} are now secured. Payment has been verified automatically!`;
-        } else if (order.status === 'paid') {
-          nextStatus = 'preparing';
-          title = '🍳 Entered the Kitchen!';
-          desc = `Chef Olaiya is preparing your delicious traditional recipes for Order ${order.id}.`;
-        } else if (order.status === 'preparing') {
-          nextStatus = 'confirmed';
-          title = '📦 Dispatched & Ready!';
-          desc = `Order ${order.id} is securely packaged and dispatched with our fast-track delivery rider!`;
-        }
-
-        if (nextStatus !== order.status) {
-          updatedOrders[orderToAdvanceIndex] = {
-            ...order,
-            status: nextStatus,
-          };
-
-          // Update local state storage
-          localStorage.setItem('olart-orders', JSON.stringify(updatedOrders));
-
-          // Sync with server database (soft sync)
-          fetch(`/api/orders/${order.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: nextStatus }),
-          }).catch((err) => console.error('Simulated API sync failed:', err));
-
-          // Trigger push notification inside timeout to prevent updating state during render
-          setTimeout(() => {
-            addAppNotification(title, desc, 'order_status', order.id);
-          }, 40);
-        }
-
-        return updatedOrders;
-      });
-    }, intervalMs);
-
-    return () => clearInterval(timer);
-  }, [simulationSpeed, soundEffectsEnabled, desktopPushEnabled]);
 
   // Cart Inactivity Tracking & Reminders Loop
   const lastCartActivityRef = useRef<number>(Date.now());
@@ -891,6 +819,10 @@ export default function App() {
   };
 
   const handleUpdateSettings = (updatedSettings: AdminSettings) => {
+    const hasPromoChanged = 
+      updatedSettings.promoMinAmount !== adminSettings.promoMinAmount ||
+      updatedSettings.promoRewardName !== adminSettings.promoRewardName;
+
     setAdminSettings(updatedSettings);
     
     fetch('/api/admin-settings', {
@@ -899,7 +831,16 @@ export default function App() {
       body: JSON.stringify(updatedSettings)
     })
     .then((res) => res.json())
-    .then(() => triggerToast('Fulfillment coordinates saved.'))
+    .then(() => {
+      triggerToast('Fulfillment coordinates saved.');
+      if (hasPromoChanged) {
+        addAppNotification(
+          '🎁 New Milestone Promo Set!',
+          `Spend ₦${(updatedSettings.promoMinAmount ?? 15000).toLocaleString()}+ on your pre-order to unlock: ${updatedSettings.promoRewardName ?? 'Free Signature Hibiscus Zobo'}!`,
+          'deal'
+        );
+      }
+    })
     .catch((err) => {
       console.error(err);
       triggerToast('Saved locally. Failed to update remote database.');
@@ -1102,7 +1043,7 @@ export default function App() {
             {/* Contact Us Button */}
             <button
               onClick={() => setActiveView(activeView === 'contact' ? 'storefront' : 'contact')}
-              className={`relative flex items-center justify-center p-2.5 sm:px-4.5 sm:py-3 rounded-xl text-sm font-bold border transition-all duration-200 gap-2 cursor-pointer ${
+              className={`relative flex items-center justify-center p-2.5 lg:px-4.5 lg:py-3 rounded-xl text-sm font-bold border transition-all duration-200 gap-2 cursor-pointer ${
                 activeView === 'contact'
                   ? 'border-amber-500 bg-amber-500/10 text-amber-600 dark:text-amber-400'
                   : 'border-neutral-200/50 dark:border-neutral-800/50 bg-white/50 dark:bg-neutral-900/40 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
@@ -1110,14 +1051,14 @@ export default function App() {
               id="contact-portal-toggle"
             >
               <Phone size={15} />
-              <span className="hidden sm:inline">Contact Us</span>
+              <span className="hidden lg:inline">Contact Us</span>
             </button>
 
             {/* User Account / Tracker Button */}
             {(activeView === 'storefront' || activeView === 'contact') && (
               <button
                 onClick={() => setIsUserPortalOpen(true)}
-                className={`relative flex items-center justify-center p-2.5 sm:px-4.5 sm:py-3 rounded-xl text-sm font-bold border transition-all duration-200 gap-2 cursor-pointer ${
+                className={`relative flex items-center justify-center p-2.5 lg:px-4.5 lg:py-3 rounded-xl text-sm font-bold border transition-all duration-200 gap-2 cursor-pointer ${
                   currentUser
                     ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 dark:bg-emerald-500/10 hover:bg-emerald-500/10'
                     : 'border-neutral-200/50 dark:border-neutral-800/50 bg-white/50 dark:bg-neutral-900/40 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
@@ -1125,7 +1066,7 @@ export default function App() {
                 id="user-portal-toggle"
               >
                 <UserIcon size={15} className={currentUser ? "animate-pulse text-emerald-500" : ""} />
-                <span className="hidden sm:inline">
+                <span className="hidden lg:inline">
                   {currentUser ? `Track (${currentUser.name})` : 'Track Pre-Orders'}
                 </span>
                 {currentUser && (
@@ -1141,13 +1082,13 @@ export default function App() {
             {(activeView === 'storefront' || activeView === 'contact') && (
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="relative flex items-center justify-center p-2.5 sm:px-4.5 sm:py-3 rounded-xl text-sm font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/10 cursor-pointer transition-all duration-200 gap-2"
+                className="relative flex items-center justify-center p-2.5 lg:px-4.5 lg:py-3 rounded-xl text-sm font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/10 cursor-pointer transition-all duration-200 gap-2"
                 id="shopping-cart-toggle"
               >
                 <ShoppingBag size={15} />
-                <span className="hidden sm:inline">My pre-orders</span>
+                <span className="hidden lg:inline">My pre-orders</span>
                 {cartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 sm:relative sm:top-0 sm:right-0 flex items-center justify-center w-5.5 h-5.5 rounded-full bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-mono text-xs font-extrabold border border-amber-500">
+                  <span className="absolute -top-1.5 -right-1.5 lg:relative lg:top-0 lg:right-0 flex items-center justify-center w-5.5 h-5.5 rounded-full bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 font-mono text-xs font-extrabold border border-amber-500">
                     {cartCount}
                   </span>
                 )}
@@ -1325,6 +1266,7 @@ export default function App() {
               onUpdateCategory={handleUpdateCategory}
               onDeleteCategory={handleDeleteCategory}
               dbStatus={dbStatus}
+              onBroadcastNotification={addAppNotification}
             />
           </motion.div>
         )}
@@ -1428,13 +1370,15 @@ export default function App() {
                         <span>Pre-Order Milestones</span>
                       </span>
                       <span className="text-amber-600 dark:text-amber-400">
-                        {cartTotal >= 15000 ? '🎉 Free Signature Hibiscus Zobo Unlocked!' : `Add ${formatNaira(15000 - cartTotal)} more for Free Drink!`}
+                        {cartTotal >= (adminSettings.promoMinAmount ?? 15000) 
+                          ? `🎉 ${adminSettings.promoRewardName ?? 'Free Signature Hibiscus Zobo'} Unlocked!` 
+                          : `Add ${formatNaira((adminSettings.promoMinAmount ?? 15000) - cartTotal)} more for Free Gift!`}
                       </span>
                     </div>
                     <div className="h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-amber-500 transition-all duration-500 rounded-full"
-                        style={{ width: `${Math.min((cartTotal / 15000) * 100, 100)}%` }}
+                        style={{ width: `${Math.min((cartTotal / (adminSettings.promoMinAmount ?? 15000)) * 100, 100)}%` }}
                       />
                     </div>
                   </div>
@@ -1968,60 +1912,13 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Simulation Settings */}
-                    <div className="p-4.5 rounded-xl border border-neutral-200 dark:border-neutral-900 bg-neutral-50 dark:bg-neutral-900/30 space-y-3">
-                      <div className="space-y-1">
-                        <h4 className="font-extrabold text-sm text-neutral-950 dark:text-white flex items-center gap-1.5">
-                          <Settings2 size={16} className="text-purple-500" />
-                          Order Flow Simulation
-                        </h4>
-                        <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                          Automatically advance submitted orders through the kitchen workflow for demonstration.
-                        </p>
-                      </div>
-
-                      {/* Speed Buttons */}
-                      <div className="grid grid-cols-3 gap-2 pt-1.5">
-                        <button
-                          onClick={() => setSimulationSpeed('fast')}
-                          className={`py-2 px-3 rounded-lg text-xs font-black border transition-all cursor-pointer text-center ${
-                            simulationSpeed === 'fast'
-                              ? 'bg-amber-500 border-amber-500 text-white'
-                              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50'
-                          }`}
-                        >
-                          Fast (14s)
-                        </button>
-                        <button
-                          onClick={() => setSimulationSpeed('normal')}
-                          className={`py-2 px-3 rounded-lg text-xs font-black border transition-all cursor-pointer text-center ${
-                            simulationSpeed === 'normal'
-                              ? 'bg-amber-500 border-amber-500 text-white'
-                              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50'
-                          }`}
-                        >
-                          Normal (35s)
-                        </button>
-                        <button
-                          onClick={() => setSimulationSpeed('off')}
-                          className={`py-2 px-3 rounded-lg text-xs font-black border transition-all cursor-pointer text-center ${
-                            simulationSpeed === 'off'
-                              ? 'bg-amber-500 border-amber-500 text-white'
-                              : 'bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50'
-                          }`}
-                        >
-                          Turn Off
-                        </button>
-                      </div>
-                    </div>
-
                     {/* Quick Demo Trigger Buttons */}
                     <div className="pt-2 space-y-2">
                       <button
                         onClick={() => {
                           addAppNotification(
                             '🍳 Live From The Kitchen!',
-                            'Chef Olaiya has started roasting premium spices for your signature stews. Savor the aroma!',
+                            'Chef Olart has started roasting premium spices for your signature stews. Savor the aroma!',
                             'system'
                           );
                         }}

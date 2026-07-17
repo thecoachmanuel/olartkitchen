@@ -61,6 +61,8 @@ export interface AdminSettings {
   contactAddress?: string;
   contactHours?: string;
   contactDescription?: string;
+  promoMinAmount?: number;
+  promoRewardName?: string;
 }
 
 export interface User {
