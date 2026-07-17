@@ -13,6 +13,7 @@ import {
 import { FoodItem, CartItem, Order, AdminSettings, User, AppNotification } from './types';
 import { INITIAL_FOOD_ITEMS, DEFAULT_ADMIN_SETTINGS, FOOD_CATEGORIES, SEED_ORDERS } from './data';
 import FoodCard from './components/FoodCard';
+import FoodDetailsModal from './components/FoodDetailsModal';
 import CheckoutModal from './components/CheckoutModal';
 import AdminPanel from './components/AdminPanel';
 import UserPortal from './components/UserPortal';
@@ -108,6 +109,7 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
   // Cart State
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [selectedFoodItem, setSelectedFoodItem] = useState<FoodItem | null>(null);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -1351,6 +1353,7 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
                       >
                         <FoodCard
                           item={item}
+                          onClick={() => setSelectedFoodItem(item)}
                           cartQuantity={cartMatch ? cartMatch.quantity : 0}
                           onAddToCart={handleAddToCart}
                           onUpdateQuantity={handleUpdateQuantity}

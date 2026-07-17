@@ -9,6 +9,7 @@ import { FoodItem } from '../types';
 import CountdownTimer from './CountdownTimer';
 
 interface FoodCardProps {
+  onClick?: () => void;
   key?: string;
   item: FoodItem;
   cartQuantity: number;
@@ -21,6 +22,7 @@ export default function FoodCard({
   cartQuantity,
   onAddToCart,
   onUpdateQuantity,
+  onClick,
 }: FoodCardProps) {
   // Check if item timer is expired
   const isExpired = new Date(item.closeTime).getTime() <= Date.now();
@@ -38,7 +40,7 @@ export default function FoodCard({
   };
 
   return (
-    <div className="group relative flex flex-col h-full rounded-2xl bg-white/70 dark:bg-neutral-900/40 border border-neutral-200/50 dark:border-neutral-800/40 shadow-sm hover:shadow-xl dark:hover:shadow-neutral-950/50 backdrop-blur-md transition-all duration-300 overflow-hidden">
+    <div onClick={onClick} className="cursor-pointer group relative flex flex-col h-full rounded-2xl bg-white/70 dark:bg-neutral-900/40 border border-neutral-200/50 dark:border-neutral-800/40 shadow-sm hover:shadow-xl dark:hover:shadow-neutral-950/50 backdrop-blur-md transition-all duration-300 overflow-hidden">
       
       {/* Category Tag */}
       <div className="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase bg-neutral-900/80 text-white backdrop-blur-md border border-white/10 shadow">
@@ -99,7 +101,7 @@ export default function FoodCard({
             ) : cartQuantity > 0 ? (
               <div className="flex items-center justify-between w-full h-[40px] px-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-sm">
                 <button
-                  onClick={() => onUpdateQuantity(item.id, cartQuantity - 1)}
+                  onClick={(e) => { e.stopPropagation(); onUpdateQuantity(item.id, cartQuantity - 1); }}
                   className="p-1.5 hover:bg-amber-500/20 active:scale-95 rounded-lg transition-all duration-150 cursor-pointer"
                   aria-label="Decrease Quantity"
                   id={`btn-dec-${item.id}`}
@@ -108,7 +110,7 @@ export default function FoodCard({
                 </button>
                 <span className="font-mono text-sm px-1 font-bold" id={`qty-${item.id}`}>{cartQuantity}</span>
                 <button
-                  onClick={() => onUpdateQuantity(item.id, cartQuantity + 1)}
+                  onClick={(e) => { e.stopPropagation(); onUpdateQuantity(item.id, cartQuantity + 1); }}
                   disabled={item.currentPreOrders + cartQuantity >= item.maxPreOrders}
                   className="p-1.5 hover:bg-amber-500/20 active:scale-95 rounded-lg transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                   aria-label="Increase Quantity"
@@ -119,7 +121,7 @@ export default function FoodCard({
               </div>
             ) : (
               <button
-                onClick={() => onAddToCart(item)}
+                onClick={(e) => { e.stopPropagation(); onAddToCart(item); }}
                 className="w-full flex items-center justify-center gap-2 h-[40px] px-4 rounded-xl text-sm font-bold bg-amber-500 hover:bg-amber-600 active:scale-95 text-white shadow-md shadow-amber-500/10 hover:shadow-amber-500/20 transition-all duration-200 cursor-pointer"
                 id={`btn-add-${item.id}`}
               >
