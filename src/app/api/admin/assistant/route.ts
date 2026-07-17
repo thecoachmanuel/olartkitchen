@@ -26,7 +26,7 @@ Provide concise, accurate, and helpful responses to the admin. If they ask about
 Do not make up fake data if it is not in the context. Answer professionally but warmly.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: [
         { role: 'user', parts: [{ text: systemPrompt }] },
         { role: 'model', parts: [{ text: 'Understood. I am ready to assist.' }] },
