@@ -28,7 +28,7 @@ Do not make up fake data if it is not in the context. Answer professionally but 
 Format your responses properly using Markdown. Use bold for titles and subtitles. Use numbered lists and bullet points where appropriate for readability. Avoid unnecessary hyphens and asterisks. Keep the formatting clean and professional.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash-lite",
       contents: [
         { role: 'user', parts: [{ text: systemPrompt }] },
         { role: 'model', parts: [{ text: 'Understood. I am ready to assist.' }] },

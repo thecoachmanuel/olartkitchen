@@ -131,7 +131,7 @@ export function AiAssistant({ foodItems, orders, settings, categories }: AiAssis
       <div className="p-4 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 p-2 rounded-lg">
-            <Sparkles className="w-5 h-5" />
+            <Bot className="w-5 h-5" />
           </div>
           <div>
             <h2 className="text-lg font-medium text-neutral-900 dark:text-neutral-50">AI Assistant</h2>
