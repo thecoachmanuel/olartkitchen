@@ -271,6 +271,12 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
 
   // Database status tracking
   const [dbStatus, setDbStatus] = useState<{ isConnected: boolean; mode: string; databaseName: string | null; error: string | null } | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -295,40 +301,34 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
         }
       };
 
-      const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+      try {
+        const [dbStatusData, items, ordersData, settings, cats, users] = await Promise.all([
+          safeFetch('/api/db-status'),
+          safeFetch('/api/food-items'),
+          safeFetch('/api/orders'),
+          safeFetch('/api/admin-settings'),
+          safeFetch('/api/categories'),
+          safeFetch('/api/users')
+        ]);
 
-      // 1. Get database status
-      const dbStatusData = await safeFetch('/api/db-status');
-      if (dbStatusData) setDbStatus(dbStatusData);
-      await delay(150);
-
-      // 2. Pull food items
-      const items = await safeFetch('/api/food-items');
-      if (Array.isArray(items)) setFoodItems(items);
-      await delay(150);
-
-      // 3. Pull orders
-      const ordersData = await safeFetch('/api/orders');
-      if (Array.isArray(ordersData)) setOrders(ordersData);
-      await delay(150);
-
-      // 4. Pull admin settings
-      const settings = await safeFetch('/api/admin-settings');
-      if (settings && settings.whatsappNumber) setAdminSettings(settings);
-      await delay(150);
-
-      // 5. Pull categories
-      const cats = await safeFetch('/api/categories');
-      if (Array.isArray(cats)) setCategories(cats);
-      await delay(150);
-
-      // 6. Pull users
-      const users = await safeFetch('/api/users');
-      if (Array.isArray(users)) setUsersList(users);
+        if (dbStatusData) setDbStatus(dbStatusData);
+        if (Array.isArray(items)) setFoodItems(items);
+        if (Array.isArray(ordersData)) setOrders(ordersData);
+        if (settings && settings.whatsappNumber) setAdminSettings(settings);
+        if (Array.isArray(cats)) setCategories(cats);
+        if (Array.isArray(users)) setUsersList(users);
+      } catch (err) {
+        console.error('Error loading data:', err);
+      } finally {
+        setIsInitializing(false);
+      }
     };
-
     loadData();
   }, []);
+
+  useEffect(() => {
+    document.title = adminSettings.footerPlatformName || 'Olart Kitchen Pre-Order Platform';
+  }, [adminSettings.footerPlatformName]);
 
   // Sync state to URL and back button handling so reloading/refreshing loads the exact page
   useEffect(() => {
@@ -1065,6 +1065,14 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
     }).format(value);
   };
 
+  if (isInitializing || !isMounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-950">
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 transition-colors duration-300 antialiased font-sans relative overflow-x-hidden w-full">
       
@@ -1100,7 +1108,7 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
             className="flex items-center gap-2 cursor-pointer group"
             id="brand-logo-btn"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center text-white shadow-lg shadow-amber-500/20 group-hover:rotate-6 transition-all duration-300 overflow-hidden">
+            <div className={`w-10 h-10 rounded-xl ${adminSettings.logoImage ? 'bg-transparent' : 'bg-gradient-to-tr from-amber-500 to-amber-600'} flex items-center justify-center text-white shadow-lg ${adminSettings.logoImage ? '' : 'shadow-amber-500/20'} group-hover:rotate-6 transition-all duration-300 overflow-hidden`}>
               {adminSettings.logoImage ? (
                 <img src={adminSettings.logoImage} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : adminSettings.logoEmoji ? (
@@ -1325,7 +1333,7 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
               <div className="flex items-start gap-3">
                 <Info size={18} className="text-amber-500 shrink-0 mt-0.5 sm:mt-0" />
                 <div className="space-y-0.5">
-                  <p className="text-sm font-bold text-neutral-900 dark:text-neutral-200">How Olart Pre-orders Work</p>
+                  <p className="text-sm font-bold text-neutral-900 dark:text-neutral-200">How {(adminSettings.logoName || 'Olart').split(' ')[0]} Pre-orders Work</p>
                   <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
                     Select your meals, verify delivery parameters, pay to our specified bank account, and tap the secure WhatsApp button to confirm your order and send your payment receipt. We prepare exactly what is confirmed!
                   </p>
@@ -1748,7 +1756,7 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
                 <div>
                   <div className="flex items-center gap-2 font-sans font-extrabold text-base text-neutral-950 dark:text-white">
                     <Bell size={18} className="text-amber-500 animate-swing" />
-                    <span>Olart Notification Hub</span>
+                    <span>{(adminSettings.logoName || 'Olart').split(' ')[0]} Notification Hub</span>
                   </div>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                     {unreadNotificationCount} unread alert{unreadNotificationCount !== 1 ? 's' : ''}
@@ -2012,24 +2020,6 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
                           />
                         </button>
                       </div>
-                    </div>
-
-                    {/* Quick Demo Trigger Buttons */}
-                    <div className="pt-2 space-y-2">
-                      <button
-                        onClick={() => {
-                          addAppNotification(
-                            '🍳 Live From The Kitchen!',
-                            'Chef Olart has started roasting premium spices for your signature stews. Savor the aroma!',
-                            'system'
-                          );
-                        }}
-                        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 transition-all border border-amber-500/20 cursor-pointer"
-                        id="test-notification-btn"
-                      >
-                        <Sparkles size={14} />
-                        Trigger Live Kitchen Demo
-                      </button>
                     </div>
                   </div>
                 )}

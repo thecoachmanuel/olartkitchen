@@ -609,7 +609,7 @@ export default function AdminPanel({
             <div className="mx-auto w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center border border-amber-500/20 shadow-sm">
               <KeyRound size={22} />
             </div>
-            <h2 className="font-sans font-bold text-2xl text-neutral-900 dark:text-neutral-100">Olart Admin</h2>
+            <h2 className="font-sans font-bold text-2xl text-neutral-900 dark:text-neutral-100">{(adminSettings.logoName || 'Olart').split(' ')[0]} Admin</h2>
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
               Authenticate using credentials to manage inventory and pre-orders.
             </p>
