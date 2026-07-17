@@ -39,7 +39,7 @@ export interface Order {
     addons?: { id: string; name: string; price: number }[];
   }[];
   totalAmount: number;
-  status: 'pending' | 'paid' | 'preparing' | 'confirmed' | 'cancelled';
+  status: 'pending' | 'paid' | 'preparing' | 'confirmed' | 'delivered' | 'cancelled';
   createdAt: string;
   paymentReference: string;
 }

@@ -31,7 +31,7 @@ const normalizeCategory = (cat: string): string => {
   return 'Rice Platters';
 };
 
-export default function App() {
+export default function App({ defaultView }: { defaultView?: 'storefront' | 'admin' | 'contact' } = {}) {
   // Theme state ('light' | 'dark')
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const stored = localStorage.getItem('olart-theme');
@@ -41,13 +41,16 @@ export default function App() {
   // Navigation View ('storefront' | 'admin' | 'contact')
   const [activeView, setActiveView] = useState<'storefront' | 'admin' | 'contact'>(() => {
     if (typeof window !== 'undefined') {
+      if (window.location.pathname === '/admin') {
+        return 'admin';
+      }
       const params = new URLSearchParams(window.location.search);
       const view = params.get('view');
       if (view === 'admin' || view === 'contact' || view === 'storefront') {
         return view as 'storefront' | 'admin' | 'contact';
       }
     }
-    return 'storefront';
+    return defaultView || 'storefront';
   });
 
   // Core Persistent States
@@ -270,49 +273,61 @@ export default function App() {
   const [dbStatus, setDbStatus] = useState<{ isConnected: boolean; mode: string; databaseName: string | null; error: string | null } | null>(null);
 
   useEffect(() => {
-    // Check MongoDB Connection Status
-    fetch('/api/db-status')
-      .then((res) => res.json())
-      .then((data) => {
-        setDbStatus(data);
-      })
-      .catch((err) => console.error('Failed to get database status:', err));
+    const loadData = async () => {
+      // Robust JSON fetching helper to avoid throwing on non-JSON rate limit responses
+      const safeFetch = async (url: string) => {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) {
+            console.warn(`Fetch for ${url} returned non-OK status: ${res.status}`);
+            return null;
+          }
+          const contentType = res.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const text = await res.text();
+            console.warn(`Fetch for ${url} did not return JSON. Body preview: ${text.slice(0, 100)}`);
+            return null;
+          }
+          return await res.json();
+        } catch (err) {
+          console.warn(`Failed to safely fetch JSON from ${url}:`, err);
+          return null;
+        }
+      };
 
-    // Pull database contents
-    fetch('/api/food-items')
-      .then((res) => res.json())
-      .then((items) => {
-        if (Array.isArray(items)) setFoodItems(items);
-      })
-      .catch((err) => console.error('Failed to fetch items:', err));
+      const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    fetch('/api/orders')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setOrders(data);
-      })
-      .catch((err) => console.error('Failed to fetch orders:', err));
+      // 1. Get database status
+      const dbStatusData = await safeFetch('/api/db-status');
+      if (dbStatusData) setDbStatus(dbStatusData);
+      await delay(150);
 
-    fetch('/api/admin-settings')
-      .then((res) => res.json())
-      .then((settings) => {
-        if (settings && settings.whatsappNumber) setAdminSettings(settings);
-      })
-      .catch((err) => console.error('Failed to fetch settings:', err));
+      // 2. Pull food items
+      const items = await safeFetch('/api/food-items');
+      if (Array.isArray(items)) setFoodItems(items);
+      await delay(150);
 
-    fetch('/api/categories')
-      .then((res) => res.json())
-      .then((cats) => {
-        if (Array.isArray(cats)) setCategories(cats);
-      })
-      .catch((err) => console.error('Failed to fetch categories:', err));
+      // 3. Pull orders
+      const ordersData = await safeFetch('/api/orders');
+      if (Array.isArray(ordersData)) setOrders(ordersData);
+      await delay(150);
 
-    fetch('/api/users')
-      .then((res) => res.json())
-      .then((users) => {
-        if (Array.isArray(users)) setUsersList(users);
-      })
-      .catch((err) => console.error('Failed to fetch users:', err));
+      // 4. Pull admin settings
+      const settings = await safeFetch('/api/admin-settings');
+      if (settings && settings.whatsappNumber) setAdminSettings(settings);
+      await delay(150);
+
+      // 5. Pull categories
+      const cats = await safeFetch('/api/categories');
+      if (Array.isArray(cats)) setCategories(cats);
+      await delay(150);
+
+      // 6. Pull users
+      const users = await safeFetch('/api/users');
+      if (Array.isArray(users)) setUsersList(users);
+    };
+
+    loadData();
   }, []);
 
   // Sync state to URL and back button handling so reloading/refreshing loads the exact page
@@ -324,6 +339,19 @@ export default function App() {
 
       const nextView = activeView;
       const nextPortal = isUserPortalOpen ? 'true' : 'false';
+
+      // Route-aware redirection for /admin path vs main path
+      if (window.location.pathname === '/admin' && nextView !== 'admin') {
+        const queryStr = isUserPortalOpen ? '?portal=true' : '';
+        window.location.href = `/${queryStr}`;
+        return;
+      }
+
+      if (window.location.pathname !== '/admin' && nextView === 'admin') {
+        const queryStr = isUserPortalOpen ? '?portal=true' : '';
+        window.location.href = `/admin${queryStr}`;
+        return;
+      }
 
       if (currentView !== nextView || currentPortal !== nextPortal) {
         params.set('view', nextView);
@@ -342,6 +370,10 @@ export default function App() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const handlePopState = () => {
+        if (window.location.pathname === '/admin') {
+          setActiveView('admin');
+          return;
+        }
         const params = new URLSearchParams(window.location.search);
         const view = params.get('view');
         const portal = params.get('portal') === 'true';

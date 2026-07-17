@@ -122,7 +122,7 @@ export default function AdminPanel({
   });
 
   // Orders Filter State
-  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'new' | 'paid' | 'preparing' | 'ready' | 'cancelled'>('all');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'new' | 'paid' | 'preparing' | 'ready' | 'delivered' | 'cancelled'>('all');
 
   // Category management local state
   const [newCategoryInput, setNewCategoryInput] = useState('');
@@ -529,7 +529,7 @@ export default function AdminPanel({
 
   // Calculate stats values
   const totalRevenue = orders
-    .filter(o => o.status === 'confirmed' || o.status === 'preparing' || o.status === 'paid')
+    .filter(o => o.status === 'confirmed' || o.status === 'preparing' || o.status === 'paid' || o.status === 'delivered')
     .reduce((sum, o) => sum + o.totalAmount, 0);
 
   const pendingPayments = orders.filter(o => o.status === 'pending').length;
@@ -546,7 +546,7 @@ export default function AdminPanel({
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   );
   sortedOrdersForChart.forEach(order => {
-    if (order.status === 'paid' || order.status === 'preparing' || order.status === 'confirmed') {
+    if (order.status === 'paid' || order.status === 'preparing' || order.status === 'confirmed' || order.status === 'delivered') {
       const date = new Date(order.createdAt);
       const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       salesByDate[dateStr] = (salesByDate[dateStr] || 0) + order.totalAmount;
@@ -1298,6 +1298,17 @@ export default function AdminPanel({
                 <span>Ready ({orders.filter(o => o.status === 'confirmed').length})</span>
               </button>
               <button
+                onClick={() => setOrderStatusFilter('delivered')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                  orderStatusFilter === 'delivered'
+                    ? 'bg-teal-500 text-white shadow-sm'
+                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800'
+                }`}
+                id="filter-order-delivered"
+              >
+                <span>Delivered ({orders.filter(o => o.status === 'delivered').length})</span>
+              </button>
+              <button
                 onClick={() => setOrderStatusFilter('cancelled')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
                   orderStatusFilter === 'cancelled'
@@ -1338,13 +1349,14 @@ export default function AdminPanel({
                           if (orderStatusFilter === 'paid') return order.status === 'paid';
                           if (orderStatusFilter === 'preparing') return order.status === 'preparing';
                           if (orderStatusFilter === 'ready') return order.status === 'confirmed';
+                          if (orderStatusFilter === 'delivered') return order.status === 'delivered';
                           if (orderStatusFilter === 'cancelled') return order.status === 'cancelled';
                           return true;
                         })
                         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                         .map((order) => {
-                          // Define what qualifies as a "New" order visually: pending status, or placed within the last 12 hours
-                          const isNew = order.status === 'pending' || (Date.now() - new Date(order.createdAt).getTime() < 12 * 60 * 60 * 1000);
+                          // Define what qualifies as a "New" order visually: pending status, and placed within the last 12 hours
+                          const isNew = order.status === 'pending' && (Date.now() - new Date(order.createdAt).getTime() < 12 * 60 * 60 * 1000);
 
                           return (
                             <tr 
@@ -1400,6 +1412,8 @@ export default function AdminPanel({
                                   className={`text-[11px] font-extrabold px-2 py-1 rounded-lg border cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-amber-500/20 uppercase ${
                                     order.status === 'confirmed'
                                       ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                                      : order.status === 'delivered'
+                                      ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20'
                                       : order.status === 'preparing'
                                       ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
                                       : order.status === 'paid'
@@ -1413,6 +1427,7 @@ export default function AdminPanel({
                                   <option value="paid" className="bg-white dark:bg-neutral-900 text-neutral-950 dark:text-neutral-50 font-bold">Payment Verified</option>
                                   <option value="preparing" className="bg-white dark:bg-neutral-900 text-neutral-950 dark:text-neutral-50 font-bold">In Kitchen</option>
                                   <option value="confirmed" className="bg-white dark:bg-neutral-900 text-neutral-950 dark:text-neutral-50 font-bold">Ready & Dispatched</option>
+                                  <option value="delivered" className="bg-white dark:bg-neutral-900 text-neutral-950 dark:text-neutral-50 font-bold">Delivered</option>
                                   <option value="cancelled" className="bg-white dark:bg-neutral-900 text-neutral-950 dark:text-neutral-50 font-bold">Cancelled</option>
                                 </select>
                               </td>
@@ -1469,16 +1484,36 @@ export default function AdminPanel({
                                     </div>
                                   )}
                                   {order.status === 'confirmed' && (
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
                                       <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 bg-emerald-500/5 dark:bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">
                                         <CheckCircle2 size={12} />
-                                        <span>{order.deliveryMethod === 'delivery' ? 'Dispatched' : 'Ready for Pickup'}</span>
+                                        <span>{order.deliveryMethod === 'delivery' ? 'Dispatched' : 'Ready'}</span>
                                       </span>
+                                      <button
+                                        onClick={() => onUpdateOrderStatus(order.id, 'delivered')}
+                                        className="px-2.5 py-1.5 bg-teal-500 hover:bg-teal-600 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-sm"
+                                      >
+                                        Mark Delivered ✅
+                                      </button>
                                       <button
                                         onClick={() => onUpdateOrderStatus(order.id, 'preparing')}
                                         className="text-xs font-semibold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 cursor-pointer underline"
                                       >
                                         Revert to Kitchen
+                                      </button>
+                                    </div>
+                                  )}
+                                  {order.status === 'delivered' && (
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-teal-600 dark:text-teal-400 font-bold flex items-center gap-1 bg-teal-500/5 dark:bg-teal-500/10 px-2.5 py-1 rounded-md border border-teal-500/20">
+                                        <CheckCircle2 size={12} className="text-teal-500" />
+                                        <span>Delivered</span>
+                                      </span>
+                                      <button
+                                        onClick={() => onUpdateOrderStatus(order.id, 'confirmed')}
+                                        className="text-xs font-semibold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 cursor-pointer underline"
+                                      >
+                                        Revert to Ready
                                       </button>
                                     </div>
                                   )}
@@ -2218,7 +2253,7 @@ export default function AdminPanel({
                               {promoCopiedId === order.id ? 'Copied' : 'Copy Text'}
                             </button>
                             <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase shrink-0 ${
-                              order.status === 'confirmed' || order.status === 'paid'
+                              order.status === 'confirmed' || order.status === 'paid' || order.status === 'delivered'
                                 ? 'bg-emerald-500/10 text-emerald-600'
                                 : order.status === 'preparing'
                                 ? 'bg-blue-500/10 text-blue-600'

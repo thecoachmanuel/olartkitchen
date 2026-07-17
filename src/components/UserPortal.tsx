@@ -426,6 +426,7 @@ export default function UserPortal({
                         const isPaid = order.status === 'paid';
                         const isPreparing = order.status === 'preparing';
                         const isConfirmed = order.status === 'confirmed';
+                        const isDelivered = order.status === 'delivered';
                         const isCancelled = order.status === 'cancelled';
 
                         // Calculate current steps
@@ -433,6 +434,7 @@ export default function UserPortal({
                         if (isPaid) currentStepIndex = 2; 
                         if (isPreparing) currentStepIndex = 3; 
                         if (isConfirmed) currentStepIndex = 4; // Complete/Out for Delivery
+                        if (isDelivered) currentStepIndex = 5; // Delivered
                         if (isCancelled) currentStepIndex = -1; // Cancelled
 
                         return (
@@ -473,12 +475,14 @@ export default function UserPortal({
                                   isPaid ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400' :
                                   isPreparing ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-400' :
                                   isConfirmed ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400' :
+                                  isDelivered ? 'bg-teal-100 text-teal-800 dark:bg-teal-950/40 dark:text-teal-400' :
                                   'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400'
                                 }`}>
                                   {order.status === 'pending' ? 'Pending Verification' :
                                    order.status === 'paid' ? 'Payment Verified' :
                                    order.status === 'preparing' ? 'In Kitchen' :
-                                   order.status === 'confirmed' ? 'Fulfillment confirmed' : 'Cancelled'}
+                                   order.status === 'confirmed' ? 'Fulfillment confirmed' :
+                                   order.status === 'delivered' ? 'Delivered' : 'Cancelled'}
                                 </span>
                               </div>
                             </div>
@@ -536,7 +540,7 @@ export default function UserPortal({
                                       <div 
                                         className="absolute top-3.5 left-3.5 h-[2px] bg-amber-500 transition-all duration-700"
                                         style={{
-                                          width: isConfirmed ? '100%' : isPreparing ? '66%' : isPaid ? '33%' : '0%'
+                                          width: isDelivered ? '100%' : isConfirmed ? '75%' : isPreparing ? '50%' : isPaid ? '25%' : '0%'
                                         }}
                                       />
 
@@ -555,7 +559,7 @@ export default function UserPortal({
                                         {/* Step 2: Payment Confirmed */}
                                         <div className="flex flex-col items-center">
                                           <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs border-2 shadow ${
-                                            isPaid || isPreparing || isConfirmed
+                                            isPaid || isPreparing || isConfirmed || isDelivered
                                               ? 'bg-emerald-500 text-white border-white dark:border-neutral-900'
                                               : isPending
                                               ? 'bg-amber-500 text-white border-white dark:border-neutral-900 animate-pulse'
@@ -564,7 +568,7 @@ export default function UserPortal({
                                             <CreditCard size={13} />
                                           </div>
                                           <span className={`text-[9px] font-extrabold mt-2 ${
-                                            isPaid || isPreparing || isConfirmed
+                                            isPaid || isPreparing || isConfirmed || isDelivered
                                               ? 'text-neutral-800 dark:text-neutral-200'
                                               : isPending
                                               ? 'text-amber-600 dark:text-amber-400 font-bold'
@@ -577,7 +581,7 @@ export default function UserPortal({
                                         {/* Step 3: In Kitchen */}
                                         <div className="flex flex-col items-center">
                                           <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs border-2 shadow ${
-                                            isConfirmed
+                                            isConfirmed || isDelivered
                                               ? 'bg-emerald-500 text-white border-white dark:border-neutral-900'
                                               : isPreparing
                                               ? 'bg-amber-500 text-white border-white dark:border-neutral-900 animate-pulse'
@@ -586,7 +590,7 @@ export default function UserPortal({
                                             <Utensils size={13} />
                                           </div>
                                           <span className={`text-[9px] font-extrabold mt-2 ${
-                                            isConfirmed
+                                            isConfirmed || isDelivered
                                               ? 'text-neutral-800 dark:text-neutral-200'
                                               : isPreparing
                                               ? 'text-amber-600 dark:text-amber-400 font-bold'
@@ -599,18 +603,40 @@ export default function UserPortal({
                                         {/* Step 4: Ready for Pickup / Dispatched */}
                                         <div className="flex flex-col items-center">
                                           <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs border-2 shadow ${
-                                            isConfirmed
+                                            isDelivered
                                               ? 'bg-emerald-500 text-white border-white dark:border-neutral-900'
+                                              : isConfirmed
+                                              ? 'bg-amber-500 text-white border-white dark:border-neutral-900 animate-pulse'
                                               : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 border-neutral-200 dark:border-neutral-800'
                                           }`}>
                                             <CheckCircle2 size={13} />
                                           </div>
                                           <span className={`text-[9px] font-extrabold mt-2 ${
-                                            isConfirmed
+                                            isDelivered
+                                              ? 'text-neutral-800 dark:text-neutral-200'
+                                              : isConfirmed
+                                              ? 'text-amber-600 dark:text-amber-400 font-bold'
+                                              : 'text-neutral-400 dark:text-neutral-500'
+                                          }`}>
+                                            {order.deliveryMethod === 'delivery' ? 'Dispatched' : 'Ready'}
+                                          </span>
+                                        </div>
+
+                                        {/* Step 5: Delivered */}
+                                        <div className="flex flex-col items-center">
+                                          <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs border-2 shadow ${
+                                            isDelivered
+                                              ? 'bg-emerald-500 text-white border-white dark:border-neutral-900'
+                                              : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 border-neutral-200 dark:border-neutral-800'
+                                          }`}>
+                                            <Check size={13} />
+                                          </div>
+                                          <span className={`text-[9px] font-extrabold mt-2 ${
+                                            isDelivered
                                               ? 'text-emerald-600 dark:text-emerald-400 font-black'
                                               : 'text-neutral-400 dark:text-neutral-500'
                                           }`}>
-                                            {order.deliveryMethod === 'delivery' ? 'Dispatched' : 'Ready for Pickup'}
+                                            Delivered
                                           </span>
                                         </div>
                                       </div>
@@ -638,12 +664,20 @@ export default function UserPortal({
                                       )}
                                       {isConfirmed && (
                                         <>
-                                          <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                                          <Clock size={13} className="text-amber-500 shrink-0 animate-pulse" />
                                           <span>
                                             {order.deliveryMethod === 'delivery' 
                                               ? `Dispatched! Your hot Nigerian meal is on its way to your address: ${order.deliveryAddress || 'Delivery Address'}`
                                               : "Ready for Pickup! Come on down to Olart Kitchen for instant collection. Safe travels!"
                                             }
+                                          </span>
+                                        </>
+                                      )}
+                                      {isDelivered && (
+                                        <>
+                                          <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                                          <span>
+                                            Delivered! Your delicious order has been successfully delivered and received. Enjoy your authentic Nigerian meal! 🍳
                                           </span>
                                         </>
                                       )}
