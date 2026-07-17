@@ -911,6 +911,25 @@ export default function App({ defaultView }: { defaultView?: 'storefront' | 'adm
     });
   };
 
+  const handleDeleteUser = (email: string) => {
+    setUsersList(prev => prev.filter(u => u.email.toLowerCase() !== email.toLowerCase()));
+    fetch(`/api/users/${encodeURIComponent(email)}`, {
+      method: 'DELETE'
+    }).catch(console.error);
+  };
+
+  const handleUpdateUser = (email: string, data: any) => {
+    setUsersList(prev => prev.map(u => (u.email.toLowerCase() === email.toLowerCase() ? { ...u, ...data } : u)));
+    const targetUser = usersList.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (targetUser) {
+      fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...targetUser, ...data })
+      }).catch(console.error);
+    }
+  };
+
   const handleUpdateSettings = (updatedSettings: AdminSettings) => {
     const isPromoNowEnabled = updatedSettings.promoEnabled !== false;
     const wasPromoEnabled = adminSettings.promoEnabled !== false;
